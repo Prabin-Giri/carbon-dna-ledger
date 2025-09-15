@@ -1,0 +1,179 @@
+[
+  {
+    "source": "IMO 2023",
+    "description": "Shipping Heavy Fuel Oil (HFO) - International Maritime Organization Guidelines 2023",
+    "scope": 3,
+    "activity_category": "shipping",
+    "region": null,
+    "value": 0.010,
+    "unit": "kgCO2e/(tonne*km)",
+    "version": "v2.1",
+    "uncertainty_pct": 15.0,
+    "metadata": {
+      "fuel_type": "HFO",
+      "vessel_type": "tanker",
+      "source_document": "IMO Fourth GHG Study 2023",
+      "calculation_method": "well_to_wake"
+    }
+  },
+  {
+    "source": "IMO 2023",
+    "description": "Shipping Liquefied Natural Gas (LNG) - International Maritime Organization Guidelines 2023",
+    "scope": 3,
+    "activity_category": "shipping",
+    "region": null,
+    "value": 0.0075,
+    "unit": "kgCO2e/(tonne*km)",
+    "version": "v2.1", 
+    "uncertainty_pct": 12.0,
+    "metadata": {
+      "fuel_type": "LNG",
+      "vessel_type": "tanker",
+      "source_document": "IMO Fourth GHG Study 2023",
+      "calculation_method": "well_to_wake"
+    }
+  },
+  {
+    "source": "IMO 2023",
+    "description": "Shipping Marine Diesel Oil (MDO) - International Maritime Organization Guidelines 2023",
+    "scope": 3,
+    "activity_category": "shipping",
+    "region": null,
+    "value": 0.0095,
+    "unit": "kgCO2e/(tonne*km)",
+    "version": "v2.1",
+    "uncertainty_pct": 10.0,
+    "metadata": {
+      "fuel_type": "MDO",
+      "vessel_type": "general",
+      "source_document": "IMO Fourth GHG Study 2023",
+      "calculation_method": "well_to_wake"
+    }
+  },
+  {
+    "source": "NL Grid 2024",
+    "description": "Netherlands Electricity Grid Mix 2024 - includes renewable energy share",
+    "scope": 2,
+    "activity_category": "electricity",
+    "region": "NL",
+    "value": 0.35,
+    "unit": "kgCO2e/kWh",
+    "version": "2024",
+    "uncertainty_pct": 8.0,
+    "metadata": {
+      "renewable_share_pct": 35,
+      "coal_share_pct": 25,
+      "gas_share_pct": 35,
+      "nuclear_share_pct": 5,
+      "grid_operator": "TenneT",
+      "data_quality": "high"
+    }
+  },
+  {
+    "source": "US Grid 2024",
+    "description": "United States Average Electricity Grid Mix 2024 - EPA eGRID data",
+    "scope": 2,
+    "activity_category": "electricity",
+    "region": "US",
+    "value": 0.40,
+    "unit": "kgCO2e/kWh",
+    "version": "2024",
+    "uncertainty_pct": 12.0,
+    "metadata": {
+      "renewable_share_pct": 22,
+      "coal_share_pct": 28,
+      "gas_share_pct": 38,
+      "nuclear_share_pct": 12,
+      "data_source": "EPA eGRID 2024",
+      "data_quality": "high"
+    }
+  },
+  {
+    "source": "IPCC AR6 2023",
+    "description": "Oil Refinery Processing - IPCC Sixth Assessment Report 2023",
+    "scope": 1,
+    "activity_category": "refinery",
+    "region": null,
+    "value": 0.45,
+    "unit": "kgCO2e/barrel",
+    "version": "AR6_2023",
+    "uncertainty_pct": 20.0,
+    "metadata": {
+      "process_type": "crude_oil_processing",
+      "complexity": "medium",
+      "source_document": "IPCC AR6 Chapter 12",
+      "scope_boundary": "direct_emissions_only"
+    }
+  },
+  {
+    "source": "EU Grid 2024",
+    "description": "European Union Average Electricity Grid Mix 2024",
+    "scope": 2,
+    "activity_category": "electricity", 
+    "region": "EU",
+    "value": 0.32,
+    "unit": "kgCO2e/kWh",
+    "version": "2024",
+    "uncertainty_pct": 10.0,
+    "metadata": {
+      "renewable_share_pct": 42,
+      "coal_share_pct": 15,
+      "gas_share_pct": 20,
+      "nuclear_share_pct": 23,
+      "data_source": "ENTSO-E 2024",
+      "data_quality": "high"
+    }
+  },
+  {
+    "source": "IMO 2023",
+    "description": "Shipping Methanol Fuel - International Maritime Organization Guidelines 2023",
+    "scope": 3,
+    "activity_category": "shipping",
+    "region": null,
+    "value": 0.0065,
+    "unit": "kgCO2e/(tonne*km)",
+    "version": "v2.1",
+    "uncertainty_pct": 18.0,
+    "metadata": {
+      "fuel_type": "methanol",
+      "vessel_type": "container",
+      "source_document": "IMO Fourth GHG Study 2023",
+      "calculation_method": "well_to_wake",
+      "note": "green_methanol_assumed"
+    }
+  },
+  {
+    "source": "DEFRA 2024",
+    "description": "UK Government GHG Conversion Factors 2024 - Road Transport Diesel",
+    "scope": 3,
+    "activity_category": "transport",
+    "region": "UK",
+    "value": 2.54,
+    "unit": "kgCO2e/litre",
+    "version": "2024",
+    "uncertainty_pct": 5.0,
+    "metadata": {
+      "fuel_type": "diesel",
+      "transport_mode": "road",
+      "vehicle_type": "heavy_goods",
+      "calculation_method": "well_to_wheel"
+    }
+  },
+  {
+    "source": "Coal Power Global",
+    "description": "Global Average Coal Power Plant Emissions Factor",
+    "scope": 2,
+    "activity_category": "electricity",
+    "region": null,
+    "value": 0.85,
+    "unit": "kgCO2e/kWh",
+    "version": "2024",
+    "uncertainty_pct": 15.0,
+    "metadata": {
+      "fuel_type": "coal",
+      "plant_efficiency": "average_global",
+      "technology": "conventional_pulverized_coal",
+      "data_quality": "medium"
+    }
+  }
+]

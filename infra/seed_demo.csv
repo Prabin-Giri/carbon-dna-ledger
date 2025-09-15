@@ -1,0 +1,16 @@
+occurred_at,supplier,activity,scope,distance_km,tonnage,fuel_type,region,kwh
+2025-06-01,OceanLift,tanker_voyage,3,9600,40000,HFO,US-EU,
+2025-06-15,OceanLift,tanker_voyage,3,8200,38000,HFO,US-EU,
+2025-06-20,GridCo,electricity,2,,,,,120000
+2025-06-02,OceanLift,tanker_voyage,3,11200,42000,LNG,US-EU,
+2025-06-25,RefineMax,refinery,1,,,,,
+2025-06-03,GridCo,electricity,2,,,,,85000
+2025-06-10,OceanLift,tanker_voyage,3,9800,39000,HFO,US-EU,
+2025-06-28,GridCo,electricity,2,,,,,95000
+2025-06-05,RefineMax,refinery,1,,,,,
+2025-06-12,OceanLift,tanker_voyage,3,7800,35000,LNG,US-EU,
+2025-06-30,GridCo,electricity,2,,,,,110000
+2025-06-08,OceanLift,tanker_voyage,3,10400,41000,HFO,US-EU,
+2025-06-18,RefineMax,refinery,1,,,,,
+2025-06-22,GridCo,electricity,2,,,,,130000
+2025-06-14,OceanLift,tanker_voyage,3,9200,37000,MDO,US-EU,

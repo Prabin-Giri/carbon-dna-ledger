@@ -1,0 +1,386 @@
+"""
+Template-based NL-to-SQL query component
+"""
+import streamlit as st
+import requests
+import pandas as pd
+import json
+
+def show_query_page(api_base):
+    """Show template-based query interface"""
+    st.header("❓ Ask Questions")
+    st.markdown("Query your carbon data using pre-defined question templates with full SQL transparency.")
+    
+    # Available query templates
+    show_available_templates()
+    
+    # Query interface
+    show_query_interface(api_base)
+
+def show_available_templates():
+    """Show information about available query templates"""
+    with st.expander("📋 Available Query Templates"):
+        st.markdown("""
+        **🏆 Top Suppliers in Period**
+        - Find the highest emitting suppliers in a specified time period
+        - Parameters: period (month/quarter/year), limit (number of results)
+        
+        **📈 Largest Month-over-Month Increase**  
+        - Identify suppliers with the biggest emission increases
+        - Parameters: None (automatically uses recent data)
+        
+        **⚠️ Events with Highest Uncertainty**
+        - Find events with the most uncertainty or quality issues
+        - Parameters: limit (number of results)
+        
+        These templates ensure safe, pre-validated queries while providing full SQL transparency.
+        """)
+
+def show_query_interface(api_base):
+    """Show the query interface"""
+    st.subheader("🔍 Query Builder")
+    
+    # Template selection
+    template_options = {
+        "Top suppliers in period": "Find the highest emitting suppliers",
+        "Largest month-over-month increase": "Find suppliers with biggest emission increases", 
+        "Events with highest uncertainty": "Find events with most uncertainty or quality issues"
+    }
+    
+    selected_template = st.selectbox(
+        "Choose a question template:",
+        list(template_options.keys()),
+        help="Select from available pre-defined query templates"
+    )
+    
+    st.info(f"**Selected**: {template_options[selected_template]}")
+    
+    # Parameter input based on selected template
+    params = collect_template_parameters(selected_template)
+    
+    # Execute query button
+    if st.button("🚀 Execute Query", type="primary"):
+        execute_template_query(api_base, selected_template, params)
+
+def collect_template_parameters(template_name):
+    """Collect parameters for the selected template"""
+    params = {}
+    
+    if template_name == "Top suppliers in period":
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            params['period'] = st.selectbox(
+                "Time Period",
+                ["month", "quarter", "year"],
+                help="Period for supplier ranking analysis"
+            )
+        
+        with col2:
+            params['limit'] = st.slider(
+                "Number of Results",
+                min_value=5,
+                max_value=50,
+                value=10,
+                help="How many top suppliers to return"
+            )
+    
+    elif template_name == "Largest month-over-month increase":
+        st.info("This template uses recent data automatically - no parameters needed.")
+    
+    elif template_name == "Events with highest uncertainty":
+        params['limit'] = st.slider(
+            "Number of Results",
+            min_value=5,
+            max_value=100,
+            value=20,
+            help="How many high-uncertainty events to return"
+        )
+    
+    return params
+
+def execute_template_query(api_base, question, params):
+    """Execute the template query and display results"""
+    try:
+        with st.spinner("Executing query..."):
+            # Prepare request
+            query_request = {
+                "question": question,
+                "params": params
+            }
+            
+            # Call API
+            response = requests.post(
+                f"{api_base}/api/query",
+                json=query_request
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                
+                # Display query results
+                show_query_results(result)
+                
+            else:
+                st.error(f"Query failed: {response.status_code}")
+                try:
+                    error_detail = response.json().get('detail', 'Unknown error')
+                    st.error(f"Error details: {error_detail}")
+                except:
+                    st.error(f"Response: {response.text}")
+    
+    except Exception as e:
+        st.error(f"Query execution error: {str(e)}")
+
+def show_query_results(result):
+    """Display query execution results"""
+    st.markdown("---")
+    st.subheader("📊 Query Results")
+    
+    # Show template information
+    st.success(f"✅ Executed template: **{result['template_name']}**")
+    
+    # Show SQL transparency
+    show_sql_transparency(result['sql'])
+    
+    # Show results data
+    show_results_data(result['rows'], result['template_name'])
+
+def show_sql_transparency(sql_query):
+    """Show the SQL query for transparency"""
+    with st.expander("🔍 SQL Query (Transparency)"):
+        st.markdown("**Generated SQL:**")
+        st.code(sql_query, language="sql")
+        
+        st.markdown("**Why SQL Transparency Matters:**")
+        st.info("""
+        - **Auditability**: You can see exactly what data is being queried
+        - **Trust**: No hidden logic or black-box operations  
+        - **Learning**: Understand how questions translate to database queries
+        - **Verification**: Technical users can validate the query logic
+        """)
+
+def show_results_data(rows, template_name):
+    """Display query results with appropriate formatting"""
+    st.subheader("📋 Results")
+    
+    if not rows:
+        st.info("No results found for this query.")
+        return
+    
+    # Convert to DataFrame for better display
+    df = pd.DataFrame(rows)
+    
+    if template_name == "Top suppliers in period":
+        show_top_suppliers_results(df)
+    elif template_name == "Largest month-over-month increase":
+        show_delta_results(df)
+    elif template_name == "Events with highest uncertainty":
+        show_uncertainty_results(df)
+    else:
+        # Generic table display
+        st.dataframe(df, use_container_width=True)
+    
+    # Export options
+    show_export_options(df, template_name)
+
+def show_top_suppliers_results(df):
+    """Display top suppliers results with visualization"""
+    # Format numeric columns
+    if 'total_kgco2e' in df.columns:
+        df['total_kgco2e'] = df['total_kgco2e'].round(1)
+    
+    if 'avg_uncertainty' in df.columns:
+        df['avg_uncertainty'] = df['avg_uncertainty'].round(1)
+    
+    # Display table
+    st.dataframe(
+        df,
+        column_config={
+            "supplier_name": st.column_config.TextColumn("Supplier"),
+            "total_kgco2e": st.column_config.NumberColumn("Total Emissions (kg CO₂e)", format="%.1f"),
+            "event_count": st.column_config.NumberColumn("Events"),
+            "avg_uncertainty": st.column_config.NumberColumn("Avg Uncertainty (%)", format="%.1f")
+        },
+        use_container_width=True,
+        hide_index=True
+    )
+    
+    # Visualization
+    if len(df) > 1:
+        import plotly.express as px
+        
+        fig = px.bar(
+            df.head(10),  # Show top 10 in chart
+            x='supplier_name',
+            y='total_kgco2e',
+            title="Top Emitters Visualization",
+            labels={'total_kgco2e': 'Total Emissions (kg CO₂e)', 'supplier_name': 'Supplier'}
+        )
+        
+        fig.update_layout(xaxis_tickangle=45)
+        st.plotly_chart(fig, use_container_width=True)
+
+def show_delta_results(df):
+    """Display delta/increase results"""
+    # Format numeric columns
+    if 'delta_kgco2e' in df.columns:
+        df['delta_kgco2e'] = df['delta_kgco2e'].round(1)
+    
+    if 'pct_change' in df.columns:
+        df['pct_change'] = df['pct_change'].round(1)
+    
+    # Display table with color coding
+    st.dataframe(
+        df,
+        column_config={
+            "supplier_name": st.column_config.TextColumn("Supplier"),
+            "delta_kgco2e": st.column_config.NumberColumn("Change (kg CO₂e)", format="%.1f"),
+            "pct_change": st.column_config.NumberColumn("Change (%)", format="%.1f")
+        },
+        use_container_width=True,
+        hide_index=True
+    )
+    
+    # Insights
+    if not df.empty:
+        largest_increase = df.iloc[0] if len(df) > 0 else None
+        
+        if largest_increase is not None:
+            st.warning(f"⚠️ **Largest Increase**: {largest_increase['supplier_name']} had the biggest increase with {largest_increase.get('pct_change', 0):.1f}% change")
+
+def show_uncertainty_results(df):
+    """Display uncertainty results with quality indicators"""
+    # Format columns
+    if 'uncertainty_pct' in df.columns:
+        df['uncertainty_pct'] = df['uncertainty_pct'].round(1)
+    
+    if 'result_kgco2e' in df.columns:
+        df['result_kgco2e'] = df['result_kgco2e'].round(1)
+    
+    # Format occurred_at if present
+    if 'occurred_at' in df.columns:
+        df['occurred_at'] = pd.to_datetime(df['occurred_at']).dt.strftime('%Y-%m-%d')
+    
+    # Display with quality indicators
+    display_df = df.copy()
+    
+    # Add quality indicator
+    if 'uncertainty_pct' in display_df.columns:
+        display_df['quality_indicator'] = display_df['uncertainty_pct'].apply(
+            lambda x: "🔴 High" if x > 30 else "🟡 Medium" if x > 15 else "🟢 Good"
+        )
+    
+    st.dataframe(
+        display_df,
+        column_config={
+            "occurred_at": st.column_config.TextColumn("Date"),
+            "supplier_name": st.column_config.TextColumn("Supplier"), 
+            "activity": st.column_config.TextColumn("Activity"),
+            "uncertainty_pct": st.column_config.NumberColumn("Uncertainty (%)", format="%.1f"),
+            "result_kgco2e": st.column_config.NumberColumn("Emissions (kg CO₂e)", format="%.1f"),
+            "quality_indicator": st.column_config.TextColumn("Quality")
+        },
+        use_container_width=True,
+        hide_index=True
+    )
+    
+    # Quality summary
+    if 'uncertainty_pct' in df.columns:
+        avg_uncertainty = df['uncertainty_pct'].mean()
+        high_uncertainty_count = len(df[df['uncertainty_pct'] > 30])
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.metric("Average Uncertainty", f"{avg_uncertainty:.1f}%")
+        
+        with col2:
+            st.metric("High Uncertainty Events", high_uncertainty_count)
+
+def show_export_options(df, template_name):
+    """Show export options for query results"""
+    st.markdown("---")
+    st.subheader("📤 Export Results")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        # CSV export
+        csv = df.to_csv(index=False)
+        st.download_button(
+            label="📊 Download as CSV",
+            data=csv,
+            file_name=f"query_results_{template_name.replace(' ', '_').lower()}.csv",
+            mime="text/csv"
+        )
+    
+    with col2:
+        # JSON export
+        json_data = df.to_json(orient='records', indent=2)
+        st.download_button(
+            label="📋 Download as JSON", 
+            data=json_data,
+            file_name=f"query_results_{template_name.replace(' ', '_').lower()}.json",
+            mime="application/json"
+        )
+    
+    with col3:
+        # Copy to clipboard (show data for copying)
+        if st.button("📋 Show Raw Data"):
+            st.code(df.to_string(index=False), language=None)
+
+def show_query_examples():
+    """Show examples of how to use the query system"""
+    st.markdown("---")
+    st.subheader("💡 Query Examples")
+    
+    examples = [
+        {
+            "title": "Find Monthly Top Emitters",
+            "template": "Top suppliers in period",
+            "params": {"period": "month", "limit": 5},
+            "description": "Get the top 5 emitting suppliers from the current month"
+        },
+        {
+            "title": "Identify Growing Emissions",
+            "template": "Largest month-over-month increase", 
+            "params": {},
+            "description": "Find which suppliers had the biggest emission increases recently"
+        },
+        {
+            "title": "Quality Control Check",
+            "template": "Events with highest uncertainty",
+            "params": {"limit": 20},
+            "description": "Find the 20 events with highest uncertainty for quality review"
+        }
+    ]
+    
+    for example in examples:
+        with st.expander(f"📝 {example['title']}"):
+            st.write(f"**Template**: {example['template']}")
+            st.write(f"**Parameters**: {example['params'] if example['params'] else 'None required'}")  
+            st.write(f"**Purpose**: {example['description']}")
+
+def show_query_limitations():
+    """Show information about query limitations and security"""
+    with st.expander("🔒 Security & Limitations"):
+        st.markdown("""
+        **Security Features:**
+        - ✅ Only pre-approved query templates allowed
+        - ✅ No arbitrary SQL injection possible  
+        - ✅ Parameters are validated and sanitized
+        - ✅ Full SQL transparency for auditability
+        
+        **Current Limitations:**
+        - 🚫 No freeform SQL queries (by design for security)
+        - 📊 Limited to 3 pre-defined query patterns
+        - ⏱️ Query timeout after 30 seconds
+        - 📄 Results limited to 1000 rows maximum
+        
+        **Why These Limitations:**
+        - **Security**: Prevents SQL injection and unauthorized data access
+        - **Performance**: Ensures queries don't overwhelm the database  
+        - **Compliance**: Maintains audit trail and access control
+        - **Usability**: Provides guided experience for non-technical users
+        """)
