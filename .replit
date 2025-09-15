@@ -1,4 +1,4 @@
-modules = ["python-3.11"]
+modules = ["python-3.11", "postgresql-16"]
 [agent]
 integrations = ["flask_supabase:1.0.0"]
 
@@ -26,13 +26,13 @@ args = "Carbon DNA Ledger"
 name = "Carbon DNA Ledger"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pip install fastapi uvicorn sqlalchemy psycopg2-binary pydantic pdfplumber python-multipart pandas plotly requests && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 & sleep 3 && streamlit run ui/app.py --server.port 5000 --server.address 0.0.0.0"
 waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [[ports]]
 localPort = 5000
@@ -43,5 +43,5 @@ localPort = 8000
 externalPort = 8000
 
 [[ports]]
-localPort = 39377
+localPort = 35523
 externalPort = 3000
