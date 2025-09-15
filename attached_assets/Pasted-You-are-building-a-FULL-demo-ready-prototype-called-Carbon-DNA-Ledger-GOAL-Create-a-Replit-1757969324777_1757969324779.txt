@@ -1,0 +1,236 @@
+You are building a FULL demo-ready prototype called **Carbon DNA Ledger**.
+
+### GOAL
+Create a Replit project that:
+1) Ingests CSV (and simple text-PDFs) of activities (shipping/refinery/supplier events),
+2) Generates auditable “DNA receipts” (inputs + emission factor + method + result + source doc),
+3) Stores them in Postgres (Supabase) with hash-chained integrity,
+4) Provides APIs (FastAPI) for listing, viewing, and what-if recomputation,
+5) Serves a simple UI (Streamlit) to upload data, browse receipts, run what-ifs, view top emitters, and simulate tampering,
+6) Seeds demo data + factors, and
+7) Is runnable on Replit with minimal clicks.
+
+### TECH STACK (must use)
+- Backend: Python 3.11, FastAPI + Uvicorn, SQLAlchemy, Pydantic
+- UI: Streamlit (run alongside FastAPI, or serve via separate process in Replit)
+- DB: Supabase Postgres (external; do NOT use Replit KV)
+- Parsing: csv + pdfplumber (skip OCR)
+- Hashing: SHA-256, row-level chaining (prev_hash -> row_hash)
+- Auth: none (demo only)
+- NL→SQL: skip freeform; implement 3 whitelisted query templates via backend endpoints
+
+### ENV / REPLIT SETUP
+1. Create a Python Replit.
+2. Add Secrets:
+   - DB_URL = postgresql+psycopg2://postgres:<password>@<host>:5432/postgres
+   - (If using Supabase direct PG: include correct host/user/pass)
+3. `poetry` or `pip` dependencies (your choice):
+   fastapi uvicorn sqlalchemy psycopg2-binary pydantic streamlit pdfplumber python-multipart pandas
+4. Configure Replit to run BOTH:
+   - Backend: `uvicorn app.main:app --host 0.0.0.0 --port 8000`
+   - UI: `streamlit run ui/app.py --server.port 8501 --server.address 0.0.0.0`
+   (Use Replit's Nix/shell or Procfile to start both; if single runner only, add a small `start.sh` that backgrounds uvicorn and then launches Streamlit.)
+
+### DATABASE SCHEMA (create via Supabase SQL editor; also provide a bootstrap script in repo `/infra/migrate.sql`)
+- Use this DDL exactly:
+
+-- enable uuid if needed:
+-- create extension if not exists "pgcrypto";
+
+CREATE TABLE IF NOT EXISTS suppliers(
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  sector text,
+  region text,
+  data_quality_score int DEFAULT 50,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS emission_factors(
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  source text NOT NULL,
+  description text,
+  scope smallint CHECK (scope in (1,2,3)),
+  activity_category text,
+  region text,
+  value numeric NOT NULL,
+  unit text NOT NULL,
+  version text,
+  uncertainty_pct numeric DEFAULT 0,
+  metadata jsonb DEFAULT '{}'::jsonb
+);
+
+CREATE TABLE IF NOT EXISTS carbon_events(
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  supplier_id uuid REFERENCES suppliers(id),
+  occurred_at timestamptz NOT NULL,
+  activity text NOT NULL,
+  scope smallint CHECK (scope in (1,2,3)) NOT NULL,
+  inputs jsonb NOT NULL,
+  factor_id uuid REFERENCES emission_factors(id),
+  method text NOT NULL,
+  result_kgco2e numeric NOT NULL,
+  uncertainty_pct numeric DEFAULT 0,
+  source_doc jsonb NOT NULL,          -- [{doc_id, page, field, raw_text, bbox?}]
+  quality_flags text[],
+  fingerprint jsonb NOT NULL,         -- normalized tokens for explain
+  row_hash text NOT NULL,
+  prev_hash text,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_fingerprint_activity ON carbon_events ((fingerprint->>'activity'));
+CREATE INDEX IF NOT EXISTS idx_events_occurred_at ON carbon_events (occurred_at);
+CREATE INDEX IF NOT EXISTS idx_events_inputs ON carbon_events USING gin (inputs);
+CREATE INDEX IF NOT EXISTS idx_events_source_doc ON carbon_events USING gin (source_doc);
+CREATE INDEX IF NOT EXISTS idx_events_supplier_id ON carbon_events (supplier_id);
+
+CREATE TABLE IF NOT EXISTS merkle_roots(
+  id bigserial PRIMARY KEY,
+  period_date date NOT NULL,
+  root_hash text NOT NULL,
+  count_events int NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
+### REPO STRUCTURE
+- app/
+  - main.py (FastAPI app, routers mount)
+  - db.py (SQLAlchemy engine/session)
+  - models.py (SQLAlchemy models)
+  - schemas.py (Pydantic)
+  - services/
+    - hashing.py (canonical JSON + sha256 + chain)
+    - factors.py (rule-based factor picker + demo catalog)
+    - scenario.py (pure function recompute before/after)
+    - ingest.py (CSV + pdfplumber parsers -> normalized records)
+    - analytics.py (group-bys for top emitters, deltas, quality gaps)
+- ui/
+  - app.py (Streamlit UI: upload, explorer, details, scenario, charts, tamper toggle)
+  - components/*.py (helpers)
+- infra/
+  - migrate.sql (same DDL as above)
+  - seed_factors.json (demo factors)
+  - seed_demo.csv (demo events)
+- README.md
+- start.sh (optional to run uvicorn + streamlit)
+
+### BACKEND REQUIREMENTS
+Implement these REST endpoints (JSON):
+1) POST /api/ingest
+   - multipart/form-data: file (CSV or text-PDF)
+   - body params: { doc_type: "csv"|"pdf", supplier_name?: string }
+   - On CSV: parse rows → normalize to fields: occurred_at, supplier, activity, scope, inputs {...}, region, fuel_type/tonnage/distance_km/kwh if present.
+   - Choose emission factor via services/factors.py based on activity_category + region + (fuel_type if shipping).
+   - Compute result_kgco2e using method string (e.g., "distance_km*tonnage*factor" or "kwh*factor").
+   - Build `fingerprint` JSON including tokens: activity, route/origin/destination if present, inputs, factor_ref (source + version), method, scope.
+   - Build `source_doc` with minimal provenance (filename, for CSV just columns; for PDF, page and extracted field names).
+   - Hash-chain:
+     - prev_hash = last inserted event.row_hash or empty if none
+     - row_hash = sha256( prev_hash + "|" + sha256(canonical_row_material) )
+     - canonical_row_material = stable-ordered JSON of [occurred_at,supplier_id,scope,activity,inputs,factor_id,method,result_kgco2e,uncertainty_pct,source_doc]
+   - Insert and return {count_inserted, sample_ids:[...]}.
+   - If fields missing, set quality_flags=["incomplete"], uncertainty_pct += 25.
+
+2) GET /api/events
+   - Query params: from, to, supplier_id
+   - Returns paginated list: [id, occurred_at, supplier_name, activity, scope, result_kgco2e, uncertainty_pct, quality_flags]
+
+3) GET /api/events/{id}
+   - Returns full record including fingerprint, method, factor (joined), source_doc, prev_hash, row_hash.
+
+4) POST /api/events/{id}/scenario
+   - Body: { changes: { fuel_type?:string, distance_km?:number, tonnage?:number, kwh?:number, grid_mix_renewables?:number, factor_override_id?:uuid } }
+   - Recompute using same method with updated token(s).
+   - Resolve new factor if fuel_type or region changed (via factors.py).
+   - Return { before:{result_kgco2e,factor_ref}, after:{result_kgco2e,factor_ref}, pct_change, changed_tokens }.
+   - Do NOT persist scenario results.
+
+5) GET /api/analytics/top_emitters?period=month|quarter&from=&to=
+   - Returns [ {supplier_name, total_kgco2e} ] sorted desc.
+
+6) GET /api/analytics/deltas?from=&to=
+   - Month-over-month totals and % change.
+
+7) GET /api/analytics/quality_gaps
+   - Returns events with highest uncertainty or quality_flags not empty.
+
+8) POST /api/query (NL→SQL TEMPLATES ONLY)
+   - Body: { question:string, params:{} }
+   - Support exactly 3 templates internally:
+     a) "top suppliers in period" → same as /analytics/top_emitters
+     b) "largest month-over-month increase" → returns supplier + delta
+     c) "events with highest uncertainty" → return top N
+   - Return the template name, the rendered SQL (string), and rows.
+
+9) POST /api/merkle/close-day
+   - Compute Merkle root across today’s row_hashes (simple pairwise hash or sha256 of concatenated ordered hashes).
+   - Insert into merkle_roots {period_date, root_hash, count_events} and return it.
+   - For demo, just show root stored (no blockchain write).
+
+### FACTOR CATALOG (seed_factors.json) – include at least:
+- Shipping HFO: source="IMO 2023", activity_category="shipping", unit="kgCO2e/(tonne*km)", value=0.010, version="v2.1"
+- Shipping LNG: source="IMO 2023", activity_category="shipping", unit="kgCO2e/(tonne*km)", value=0.0075, version="v2.1"
+- Electricity NL 2024: source="NL Grid 2024", activity_category="electricity", unit="kgCO2e/kWh", value=0.35, version="2024"
+- Electricity US Avg 2024: source="US Grid 2024", activity_category="electricity", unit="kgCO2e/kWh", value=0.40, version="2024"
+
+### UI REQUIREMENTS (Streamlit ui/app.py)
+Pages/sections:
+1) **Upload**
+   - Upload CSV or text-PDF
+   - Call /api/ingest → Show #inserted and sample IDs
+2) **Event Explorer**
+   - Filters: date range, supplier, activity, scope
+   - Table columns: date, supplier, activity, result_kgco2e, uncertainty, flags, “View”
+3) **Event Details**
+   - Show “DNA chips”: activity | inputs (distance, tonnage, kWh, fuel) | factor (source+version) | method | result | uncertainty
+   - “Provenance panel”: show filename and (for PDF) page # and text snippet
+   - “Integrity chain”: prev_hash → row_hash (monospace). Button “Simulate tamper” flips a local value and re-hashes to demonstrate mismatch (do NOT persist).
+4) **What-If Scenario**
+   - Controls: fuel dropdown (HFO/LNG), numeric sliders for distance/tonnage/kWh, optional grid mix %
+   - Calls /api/events/{id}/scenario → show Before/After and % change
+5) **Analytics**
+   - “Top suppliers in period” bar chart
+   - “Month over month deltas” line chart
+   - “Quality gaps” table (events with highest uncertainty/flags)
+6) **Ask (template NL→SQL)**
+   - Dropdown with 3 question types, params (period, from/to, N)
+   - Calls /api/query; display rows and the SQL used (read-only transparency)
+
+### SEED DATA
+- Place /infra/seed_demo.csv with columns:
+  occurred_at,supplier,activity,scope,distance_km,tonnage,fuel_type,region,kwh
+  2025-06-01,OceanLift,tanker_voyage,3,9600,40000,HFO,US-EU,
+  2025-06-15,OceanLift,tanker_voyage,3,8200,38000,HFO,US-EU,
+  2025-06-20,GridCo,electricity,2,,,,NL,120000
+
+- On first run, provide a small script `python app/seed.py` that:
+  - Inserts suppliers (OceanLift, GridCo),
+  - Loads seed_factors.json into emission_factors,
+  - Ingests seed_demo.csv through the same pipeline (so it tests end-to-end).
+
+### ACCEPTANCE CRITERIA (must pass)
+- Ingest seed CSV → creates ≥3 events with valid row_hash, prev_hash chaining.
+- GET /api/events returns list; GET /api/events/{id} shows full receipt.
+- POST /api/events/{id}/scenario with {fuel_type:"LNG"} returns lower after.value and correct % delta (using LNG factor).
+- Analytics endpoints return meaningful results.
+- Streamlit UI:
+  - Upload works,
+  - Event browsing/detail works,
+  - Tamper simulation visibly warns,
+  - What-if recompute shows before/after,
+  - Top suppliers chart renders,
+  - NL→SQL (templates) answers at least 3 question types and shows the SQL string.
+- Provide README with:
+  - How to set DB_URL,
+  - How to run backend and UI on Replit,
+  - Demo flow (5 steps) for judges.
+
+### QUALITY NOTES
+- Canonicalize JSON before hashing to keep stable hashes (sorted keys; ensure decimals cast to strings).
+- Handle missing fields by setting quality_flags and +25% uncertainty.
+- Indexes already defined; use LIMIT/OFFSET for pagination.
+- No freeform SQL from the UI; templates only.
+- Keep code clean, commented, and runnable without manual edits.
+
+Build all of this now.
