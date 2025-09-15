@@ -36,7 +36,7 @@ class EmissionFactor(Base):
     unit = Column(Text, nullable=False)
     version = Column(Text)
     uncertainty_pct = Column(Numeric, default=0)
-    metadata = Column(JSONB, default={})
+    factor_metadata = Column(JSONB, default={})
     
     # Relationships
     events = relationship("CarbonEvent", back_populates="factor")

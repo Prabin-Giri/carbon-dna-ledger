@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS emission_factors(
   unit text NOT NULL,
   version text,
   uncertainty_pct numeric DEFAULT 0,
-  metadata jsonb DEFAULT '{}'::jsonb
+  factor_metadata jsonb DEFAULT '{}'::jsonb
 );
 
 -- Create carbon_events table (main hash-chained ledger)

@@ -9,7 +9,7 @@
     "unit": "kgCO2e/(tonne*km)",
     "version": "v2.1",
     "uncertainty_pct": 15.0,
-    "metadata": {
+    "factor_metadata": {
       "fuel_type": "HFO",
       "vessel_type": "tanker",
       "source_document": "IMO Fourth GHG Study 2023",
@@ -26,7 +26,7 @@
     "unit": "kgCO2e/(tonne*km)",
     "version": "v2.1", 
     "uncertainty_pct": 12.0,
-    "metadata": {
+    "factor_metadata": {
       "fuel_type": "LNG",
       "vessel_type": "tanker",
       "source_document": "IMO Fourth GHG Study 2023",
@@ -43,7 +43,7 @@
     "unit": "kgCO2e/(tonne*km)",
     "version": "v2.1",
     "uncertainty_pct": 10.0,
-    "metadata": {
+    "factor_metadata": {
       "fuel_type": "MDO",
       "vessel_type": "general",
       "source_document": "IMO Fourth GHG Study 2023",
@@ -60,7 +60,7 @@
     "unit": "kgCO2e/kWh",
     "version": "2024",
     "uncertainty_pct": 8.0,
-    "metadata": {
+    "factor_metadata": {
       "renewable_share_pct": 35,
       "coal_share_pct": 25,
       "gas_share_pct": 35,
@@ -79,7 +79,7 @@
     "unit": "kgCO2e/kWh",
     "version": "2024",
     "uncertainty_pct": 12.0,
-    "metadata": {
+    "factor_metadata": {
       "renewable_share_pct": 22,
       "coal_share_pct": 28,
       "gas_share_pct": 38,
@@ -98,7 +98,7 @@
     "unit": "kgCO2e/barrel",
     "version": "AR6_2023",
     "uncertainty_pct": 20.0,
-    "metadata": {
+    "factor_metadata": {
       "process_type": "crude_oil_processing",
       "complexity": "medium",
       "source_document": "IPCC AR6 Chapter 12",
@@ -115,7 +115,7 @@
     "unit": "kgCO2e/kWh",
     "version": "2024",
     "uncertainty_pct": 10.0,
-    "metadata": {
+    "factor_metadata": {
       "renewable_share_pct": 42,
       "coal_share_pct": 15,
       "gas_share_pct": 20,
@@ -134,7 +134,7 @@
     "unit": "kgCO2e/(tonne*km)",
     "version": "v2.1",
     "uncertainty_pct": 18.0,
-    "metadata": {
+    "factor_metadata": {
       "fuel_type": "methanol",
       "vessel_type": "container",
       "source_document": "IMO Fourth GHG Study 2023",
@@ -152,7 +152,7 @@
     "unit": "kgCO2e/litre",
     "version": "2024",
     "uncertainty_pct": 5.0,
-    "metadata": {
+    "factor_metadata": {
       "fuel_type": "diesel",
       "transport_mode": "road",
       "vehicle_type": "heavy_goods",
@@ -169,7 +169,7 @@
     "unit": "kgCO2e/kWh",
     "version": "2024",
     "uncertainty_pct": 15.0,
-    "metadata": {
+    "factor_metadata": {
       "fuel_type": "coal",
       "plant_efficiency": "average_global",
       "technology": "conventional_pulverized_coal",

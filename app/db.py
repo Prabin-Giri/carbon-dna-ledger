@@ -7,7 +7,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 # Get database URL from environment
-DATABASE_URL = os.getenv("DB_URL", "postgresql+psycopg2://postgres:password@localhost:5432/postgres")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://postgres:password@localhost:5432/postgres")
 
 # Create SQLAlchemy engine
 engine = create_engine(
