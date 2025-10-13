@@ -87,3 +87,12 @@ class QualityGap(BaseModel):
     uncertainty_pct: float
     quality_flags: List[str]
     result_kgco2e: float
+
+class IngestRecordsRequest(BaseModel):
+    documentType: str
+    headers: List[str]
+    rows: List[Dict[str, Any]]
+
+class IngestRecordsResponse(BaseModel):
+    count_inserted: int
+    errors: List[str] = []

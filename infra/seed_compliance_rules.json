@@ -1,0 +1,831 @@
+{
+  "compliance_frameworks": [
+    {
+      "framework": "EPA",
+      "name": "Environmental Protection Agency (US)",
+      "description": "US federal environmental regulations for greenhouse gas reporting",
+      "threshold": 25000,
+      "threshold_unit": "tons_co2e",
+      "requirements": [
+        "emission_factor_source_verification",
+        "activity_data_completeness", 
+        "calculation_methodology_documentation",
+        "uncertainty_quantification",
+        "third_party_verification",
+        "annual_reporting",
+        "record_retention_5_years"
+      ],
+      "penalties": {
+        "minor_violation": 50000,
+        "major_violation": 250000,
+        "repeat_violation": 500000
+      },
+      "deadlines": {
+        "annual_report": "March 31",
+        "quarterly_updates": "Last day of quarter"
+      }
+    },
+    {
+      "framework": "EU_ETS",
+      "name": "European Union Emissions Trading System",
+      "description": "EU carbon market compliance requirements",
+      "threshold": 0,
+      "threshold_unit": "tons_co2e",
+      "requirements": [
+        "monitoring_plan_approval",
+        "verification_by_accredited_verifier",
+        "annual_emission_report",
+        "surrendering_allowances",
+        "registry_account_management",
+        "compliance_with_mrv_regulation"
+      ],
+      "penalties": {
+        "excess_emissions": 100,
+        "late_surrender": 200,
+        "non_compliance": 500000
+      },
+      "deadlines": {
+        "annual_report": "March 31",
+        "allowance_surrender": "April 30"
+      }
+    },
+    {
+      "framework": "TCFD",
+      "name": "Task Force on Climate-related Financial Disclosures",
+      "description": "Voluntary climate risk disclosure framework",
+      "threshold": 0,
+      "threshold_unit": "voluntary",
+      "requirements": [
+        "governance_disclosure",
+        "strategy_disclosure",
+        "risk_management_disclosure",
+        "metrics_targets_disclosure",
+        "scenario_analysis",
+        "forward_looking_statements"
+      ],
+      "penalties": {
+        "investor_confidence_loss": 0.05,
+        "regulatory_action": 1000000,
+        "reputation_damage": 0.02
+      },
+      "deadlines": {
+        "annual_report": "Annual",
+        "quarterly_updates": "Quarterly"
+      }
+    },
+    {
+      "framework": "SEC",
+      "name": "Securities and Exchange Commission (US)",
+      "description": "US securities regulations for climate risk disclosure",
+      "threshold": 0,
+      "threshold_unit": "public_companies",
+      "requirements": [
+        "climate_risk_disclosure",
+        "emission_data_accuracy",
+        "governance_structure",
+        "risk_management_processes",
+        "material_impact_assessment",
+        "forward_looking_statements"
+      ],
+      "penalties": {
+        "material_misstatement": 5000000,
+        "inadequate_disclosure": 1000000,
+        "investor_harm": 0.1
+      },
+      "deadlines": {
+        "10k_filing": "60-90 days after year end",
+        "quarterly_updates": "40-45 days after quarter end"
+      }
+    },
+    {
+      "framework": "CARB",
+      "name": "California Air Resources Board",
+      "description": "California state carbon reporting requirements",
+      "threshold": 10000,
+      "threshold_unit": "tons_co2e",
+      "requirements": [
+        "mandatory_reporting",
+        "third_party_verification",
+        "emission_reduction_plan",
+        "compliance_offset_programs",
+        "annual_verification",
+        "record_keeping_requirements"
+      ],
+      "penalties": {
+        "reporting_violation": 10000,
+        "verification_failure": 25000,
+        "non_compliance": 100000
+      },
+      "deadlines": {
+        "annual_report": "April 1",
+        "quarterly_updates": "Last day of quarter"
+      }
+    },
+    {
+      "framework": "ISO_14001",
+      "name": "ISO 14001 Environmental Management System",
+      "description": "International standard for environmental management systems",
+      "threshold": 0,
+      "threshold_unit": "voluntary",
+      "requirements": [
+        "environmental_policy",
+        "environmental_aspects_identification",
+        "legal_compliance_requirements",
+        "environmental_objectives_targets",
+        "environmental_management_program",
+        "operational_control_procedures",
+        "emergency_preparedness_response",
+        "monitoring_measurement",
+        "internal_audit",
+        "management_review"
+      ],
+      "penalties": {
+        "certification_loss": 50000,
+        "market_access_restriction": 0.1,
+        "reputation_damage": 0.05
+      },
+      "deadlines": {
+        "annual_review": "Annual",
+        "certification_renewal": "Every 3 years"
+      }
+    },
+    {
+      "framework": "GHG_Protocol",
+      "name": "Greenhouse Gas Protocol",
+      "description": "International standard for greenhouse gas accounting",
+      "threshold": 0,
+      "threshold_unit": "voluntary",
+      "requirements": [
+        "organizational_boundary_setting",
+        "operational_boundary_setting",
+        "scope_1_emissions_calculation",
+        "scope_2_emissions_calculation",
+        "scope_3_emissions_calculation",
+        "emission_factor_verification",
+        "activity_data_validation",
+        "uncertainty_analysis",
+        "third_party_verification"
+      ],
+      "penalties": {
+        "credibility_loss": 0.1,
+        "stakeholder_trust_loss": 0.15,
+        "market_access_restriction": 0.05
+      },
+      "deadlines": {
+        "annual_inventory": "Annual",
+        "quarterly_updates": "Quarterly"
+      }
+    },
+    {
+      "framework": "CDP",
+      "name": "Carbon Disclosure Project",
+      "description": "Global environmental disclosure system",
+      "threshold": 0,
+      "threshold_unit": "voluntary",
+      "requirements": [
+        "climate_change_disclosure",
+        "water_security_disclosure",
+        "forest_disclosure",
+        "supply_chain_disclosure",
+        "emission_reduction_targets",
+        "climate_governance",
+        "risk_opportunity_assessment",
+        "scenario_analysis"
+      ],
+      "penalties": {
+        "investor_confidence_loss": 0.08,
+        "supply_chain_exclusion": 0.2,
+        "reputation_damage": 0.1
+      },
+      "deadlines": {
+        "annual_disclosure": "July 31",
+        "quarterly_updates": "Quarterly"
+      }
+    },
+    {
+      "framework": "SBTi",
+      "name": "Science Based Targets Initiative",
+      "description": "Corporate climate action framework for setting science-based targets",
+      "threshold": 0,
+      "threshold_unit": "voluntary",
+      "requirements": [
+        "target_setting_methodology",
+        "scope_1_2_targets",
+        "scope_3_targets",
+        "target_validation",
+        "progress_tracking",
+        "annual_progress_reporting",
+        "target_achievement_verification"
+      ],
+      "penalties": {
+        "target_validation_loss": 0.1,
+        "investor_confidence_loss": 0.12,
+        "market_access_restriction": 0.15
+      },
+      "deadlines": {
+        "target_submission": "Annual",
+        "progress_reporting": "Annual"
+      }
+    },
+    {
+      "framework": "GRI",
+      "name": "Global Reporting Initiative",
+      "description": "International standards for sustainability reporting",
+      "threshold": 0,
+      "threshold_unit": "voluntary",
+      "requirements": [
+        "sustainability_context",
+        "stakeholder_inclusiveness",
+        "materiality_assessment",
+        "completeness_reporting",
+        "accuracy_verification",
+        "clarity_communication",
+        "comparability_consistency",
+        "reliability_verification"
+      ],
+      "penalties": {
+        "stakeholder_trust_loss": 0.1,
+        "market_access_restriction": 0.08,
+        "reputation_damage": 0.06
+      },
+      "deadlines": {
+        "annual_report": "Annual",
+        "quarterly_updates": "Quarterly"
+      }
+    },
+    {
+      "framework": "SASB",
+      "name": "Sustainability Accounting Standards Board",
+      "description": "Industry-specific sustainability accounting standards",
+      "threshold": 0,
+      "threshold_unit": "voluntary",
+      "requirements": [
+        "industry_specific_metrics",
+        "materiality_assessment",
+        "quantitative_metrics",
+        "qualitative_disclosures",
+        "forward_looking_metrics",
+        "stakeholder_value_creation",
+        "risk_opportunity_disclosure"
+      ],
+      "penalties": {
+        "investor_confidence_loss": 0.08,
+        "market_access_restriction": 0.1,
+        "reputation_damage": 0.05
+      },
+      "deadlines": {
+        "annual_report": "Annual",
+        "quarterly_updates": "Quarterly"
+      }
+    },
+    {
+      "framework": "IFRS_S2",
+      "name": "IFRS S2 Climate-related Disclosures",
+      "description": "International Financial Reporting Standards for climate disclosures",
+      "threshold": 0,
+      "threshold_unit": "public_companies",
+      "requirements": [
+        "climate_governance",
+        "climate_strategy",
+        "climate_risk_management",
+        "climate_metrics_targets",
+        "scope_1_2_3_emissions",
+        "climate_scenario_analysis",
+        "transition_plan_disclosure"
+      ],
+      "penalties": {
+        "regulatory_action": 2000000,
+        "investor_confidence_loss": 0.1,
+        "market_access_restriction": 0.15
+      },
+      "deadlines": {
+        "annual_report": "Annual",
+        "interim_reports": "Semi-annual"
+      }
+    },
+    {
+      "framework": "CSRD",
+      "name": "Corporate Sustainability Reporting Directive (EU)",
+      "description": "EU mandatory sustainability reporting for large companies",
+      "threshold": 250,
+      "threshold_unit": "employees",
+      "requirements": [
+        "double_materiality_assessment",
+        "sustainability_statement",
+        "climate_governance",
+        "climate_strategy",
+        "climate_risk_management",
+        "climate_metrics_targets",
+        "scope_1_2_3_emissions",
+        "climate_scenario_analysis",
+        "transition_plan",
+        "third_party_assurance"
+      ],
+      "penalties": {
+        "regulatory_action": 5000000,
+        "market_access_restriction": 0.2,
+        "reputation_damage": 0.15
+      },
+      "deadlines": {
+        "annual_report": "Annual",
+        "interim_reports": "Semi-annual"
+      }
+    },
+    {
+      "framework": "DEFRA",
+      "name": "Department for Environment, Food and Rural Affairs (UK)",
+      "description": "UK mandatory greenhouse gas reporting for quoted companies",
+      "threshold": 0,
+      "threshold_unit": "quoted_companies",
+      "requirements": [
+        "annual_ghg_emissions",
+        "emission_intensity_ratio",
+        "at_least_one_emission_reduction_target",
+        "methodology_statement",
+        "scope_1_2_emissions",
+        "scope_3_emissions_voluntary"
+      ],
+      "penalties": {
+        "regulatory_action": 1000000,
+        "reputation_damage": 0.1,
+        "investor_confidence_loss": 0.08
+      },
+      "deadlines": {
+        "annual_report": "Annual",
+        "interim_reports": "Semi-annual"
+      }
+    },
+    {
+      "framework": "TCFD_UK",
+      "name": "TCFD Mandatory Disclosure (UK)",
+      "description": "UK mandatory TCFD-aligned climate disclosures for large companies",
+      "threshold": 500,
+      "threshold_unit": "employees",
+      "requirements": [
+        "governance_disclosure",
+        "strategy_disclosure",
+        "risk_management_disclosure",
+        "metrics_targets_disclosure",
+        "scenario_analysis",
+        "forward_looking_statements",
+        "third_party_assurance"
+      ],
+      "penalties": {
+        "regulatory_action": 2000000,
+        "reputation_damage": 0.12,
+        "investor_confidence_loss": 0.1
+      },
+      "deadlines": {
+        "annual_report": "Annual",
+        "interim_reports": "Semi-annual"
+      }
+    },
+    {
+      "framework": "OSFI",
+      "name": "Office of the Superintendent of Financial Institutions (Canada)",
+      "description": "Canadian climate risk management guidelines for financial institutions",
+      "threshold": 0,
+      "threshold_unit": "financial_institutions",
+      "requirements": [
+        "climate_risk_governance",
+        "climate_risk_management",
+        "climate_scenario_analysis",
+        "climate_risk_disclosure",
+        "climate_risk_monitoring",
+        "climate_risk_reporting"
+      ],
+      "penalties": {
+        "regulatory_action": 1000000,
+        "reputation_damage": 0.1,
+        "market_access_restriction": 0.15
+      },
+      "deadlines": {
+        "annual_report": "Annual",
+        "quarterly_reports": "Quarterly"
+      }
+    },
+    {
+      "framework": "APRA",
+      "name": "Australian Prudential Regulation Authority",
+      "description": "Australian climate risk management requirements for financial institutions",
+      "threshold": 0,
+      "threshold_unit": "financial_institutions",
+      "requirements": [
+        "climate_risk_governance",
+        "climate_risk_management",
+        "climate_scenario_analysis",
+        "climate_risk_disclosure",
+        "climate_risk_monitoring",
+        "climate_risk_reporting"
+      ],
+      "penalties": {
+        "regulatory_action": 1000000,
+        "reputation_damage": 0.1,
+        "market_access_restriction": 0.15
+      },
+      "deadlines": {
+        "annual_report": "Annual",
+        "quarterly_reports": "Quarterly"
+      }
+    },
+    {
+      "framework": "PRA",
+      "name": "Prudential Regulation Authority (UK)",
+      "description": "UK climate risk management requirements for banks and insurers",
+      "threshold": 0,
+      "threshold_unit": "financial_institutions",
+      "requirements": [
+        "climate_risk_governance",
+        "climate_risk_management",
+        "climate_scenario_analysis",
+        "climate_risk_disclosure",
+        "climate_risk_monitoring",
+        "climate_risk_reporting"
+      ],
+      "penalties": {
+        "regulatory_action": 2000000,
+        "reputation_damage": 0.12,
+        "market_access_restriction": 0.2
+      },
+      "deadlines": {
+        "annual_report": "Annual",
+        "quarterly_reports": "Quarterly"
+      }
+    },
+    {
+      "framework": "ESMA",
+      "name": "European Securities and Markets Authority",
+      "description": "EU climate risk disclosure requirements for financial market participants",
+      "threshold": 0,
+      "threshold_unit": "financial_market_participants",
+      "requirements": [
+        "climate_risk_governance",
+        "climate_risk_management",
+        "climate_scenario_analysis",
+        "climate_risk_disclosure",
+        "climate_risk_monitoring",
+        "climate_risk_reporting"
+      ],
+      "penalties": {
+        "regulatory_action": 5000000,
+        "reputation_damage": 0.15,
+        "market_access_restriction": 0.25
+      },
+      "deadlines": {
+        "annual_report": "Annual",
+        "quarterly_reports": "Quarterly"
+      }
+    }
+  ],
+  "compliance_rules": [
+    {
+      "rule_id": "EPA_001",
+      "framework": "EPA",
+      "rule_name": "Annual GHG Reporting Threshold",
+      "rule_description": "Organizations with annual GHG emissions ≥25,000 tons CO2e must report to EPA",
+      "conditions": {
+        "total_emissions_tons_co2e": {"gte": 25000}
+      },
+      "severity": "high",
+      "auto_apply": true,
+      "required_fields": ["total_emissions_tons_co2e", "reporting_year", "facility_id"],
+      "validation_rules": ["emission_calculation_verification", "third_party_verification"],
+      "threshold_values": {"emission_threshold": 25000}
+    },
+    {
+      "rule_id": "EPA_002", 
+      "framework": "EPA",
+      "rule_name": "Emission Factor Source Verification",
+      "rule_description": "All emission factors must be from approved sources with proper documentation",
+      "conditions": {
+        "emission_factors": {"source_verified": true}
+      },
+      "severity": "medium",
+      "auto_apply": true,
+      "required_fields": ["emission_factor_source", "verification_documentation"],
+      "validation_rules": ["source_verification", "documentation_completeness"]
+    },
+    {
+      "rule_id": "EU_ETS_001",
+      "framework": "EU_ETS", 
+      "rule_name": "Installation Monitoring Plan",
+      "rule_description": "All installations must have approved monitoring plans",
+      "conditions": {
+        "installation_type": {"in": ["combustion", "refinery", "cement", "steel", "aluminum"]}
+      },
+      "severity": "critical",
+      "auto_apply": true,
+      "required_fields": ["monitoring_plan_id", "plan_approval_date", "verification_body"],
+      "validation_rules": ["plan_approval_verification", "annual_review"]
+    },
+    {
+      "rule_id": "TCFD_001",
+      "framework": "TCFD",
+      "rule_name": "Governance Disclosure",
+      "rule_description": "Organizations must disclose climate governance structure and processes",
+      "conditions": {
+        "organization_type": {"in": ["public_company", "financial_institution", "large_corporation"]}
+      },
+      "severity": "medium",
+      "auto_apply": false,
+      "required_fields": ["board_oversight", "management_responsibility", "climate_committee"],
+      "validation_rules": ["governance_structure_verification"]
+    },
+    {
+      "rule_id": "SEC_001",
+      "framework": "SEC",
+      "rule_name": "Climate Risk Disclosure",
+      "rule_description": "Public companies must disclose material climate-related risks",
+      "conditions": {
+        "company_type": "public_company",
+        "material_risk_threshold": {"gte": 0.05}
+      },
+      "severity": "high",
+      "auto_apply": true,
+      "required_fields": ["climate_risk_assessment", "material_impact_analysis", "governance_structure"],
+      "validation_rules": ["materiality_assessment", "risk_quantification"]
+    },
+    {
+      "rule_id": "CARB_001",
+      "framework": "CARB",
+      "rule_name": "California GHG Reporting",
+      "rule_description": "California facilities with ≥10,000 tons CO2e must report to CARB",
+      "conditions": {
+        "location": "California",
+        "total_emissions_tons_co2e": {"gte": 10000}
+      },
+      "severity": "high",
+      "auto_apply": true,
+      "required_fields": ["facility_id", "emission_data", "verification_report"],
+      "validation_rules": ["third_party_verification", "emission_calculation_verification"]
+    },
+    {
+      "rule_id": "ISO_14001_001",
+      "framework": "ISO_14001",
+      "rule_name": "Environmental Policy",
+      "rule_description": "Organizations must establish and maintain environmental policy",
+      "conditions": {
+        "certification_status": "certified"
+      },
+      "severity": "medium",
+      "auto_apply": false,
+      "required_fields": ["environmental_policy", "policy_approval", "policy_communication"],
+      "validation_rules": ["policy_completeness", "stakeholder_communication"]
+    },
+    {
+      "rule_id": "GHG_Protocol_001",
+      "framework": "GHG_Protocol",
+      "rule_name": "Scope 1 Emissions Calculation",
+      "rule_description": "Organizations must calculate and report Scope 1 emissions",
+      "conditions": {
+        "reporting_standard": "GHG_Protocol"
+      },
+      "severity": "medium",
+      "auto_apply": false,
+      "required_fields": ["scope_1_emissions", "emission_sources", "calculation_methodology"],
+      "validation_rules": ["emission_calculation_verification", "methodology_documentation"]
+    },
+    {
+      "rule_id": "CDP_001",
+      "framework": "CDP",
+      "rule_name": "Climate Change Disclosure",
+      "rule_description": "Organizations must complete annual CDP climate change questionnaire",
+      "conditions": {
+        "cdp_participation": true
+      },
+      "severity": "medium",
+      "auto_apply": false,
+      "required_fields": ["cdp_response", "emission_data", "targets_goals"],
+      "validation_rules": ["response_completeness", "data_verification"]
+    },
+    {
+      "rule_id": "SBTi_001",
+      "framework": "SBTi",
+      "rule_name": "Science-Based Target Setting",
+      "rule_description": "Organizations must set science-based emission reduction targets",
+      "conditions": {
+        "sbti_commitment": true
+      },
+      "severity": "medium",
+      "auto_apply": false,
+      "required_fields": ["target_setting", "target_validation", "progress_tracking"],
+      "validation_rules": ["target_methodology", "validation_approval"]
+    },
+    {
+      "rule_id": "GENERAL_001",
+      "framework": "GENERAL",
+      "rule_name": "Data Quality Minimum Standards",
+      "rule_description": "All emission data must meet minimum quality standards with uncertainty ≤20%",
+      "conditions": {
+        "data_quality_score": {"lt": 80}
+      },
+      "severity": "high",
+      "auto_apply": true,
+      "required_fields": ["data_quality_score", "uncertainty_percentage", "methodology"],
+      "validation_rules": ["uncertainty_quantification", "methodology_verification"],
+      "threshold_values": {"max_uncertainty": 20, "min_quality_score": 80}
+    },
+    {
+      "rule_id": "GENERAL_002",
+      "framework": "GENERAL",
+      "rule_name": "Emission Factor Source Documentation",
+      "rule_description": "All emission factors must be from recognized sources (EPA, IPCC, DEFRA, etc.)",
+      "conditions": {
+        "emission_factor_source": {"not_in": ["EPA", "IPCC", "DEFRA", "EIA", "IEA", "Verified"]}
+      },
+      "severity": "medium",
+      "auto_apply": true,
+      "required_fields": ["emission_factor_source", "source_documentation", "factor_version"],
+      "validation_rules": ["source_verification", "documentation_completeness"]
+    },
+    {
+      "rule_id": "GENERAL_003",
+      "framework": "GENERAL",
+      "rule_name": "Activity Data Completeness",
+      "rule_description": "Activity data must be complete for all emission sources with >1% of total emissions",
+      "conditions": {
+        "activity_data_completeness": {"lt": 95}
+      },
+      "severity": "high",
+      "auto_apply": true,
+      "required_fields": ["activity_amount", "activity_unit", "measurement_method"],
+      "validation_rules": ["completeness_verification", "measurement_accuracy"],
+      "threshold_values": {"min_completeness": 95}
+    },
+    {
+      "rule_id": "GENERAL_004",
+      "framework": "GENERAL",
+      "rule_name": "Scope 1 Direct Emissions Tracking",
+      "rule_description": "All Scope 1 emissions must be tracked with fuel consumption data",
+      "conditions": {
+        "scope_1_emissions": {"gt": 0},
+        "fuel_consumption_data": {"exists": false}
+      },
+      "severity": "critical",
+      "auto_apply": true,
+      "required_fields": ["fuel_type", "fuel_consumption", "emission_factor", "combustion_efficiency"],
+      "validation_rules": ["fuel_data_verification", "emission_calculation_verification"]
+    },
+    {
+      "rule_id": "GENERAL_005",
+      "framework": "GENERAL",
+      "rule_name": "Scope 2 Electricity Emissions",
+      "rule_description": "Scope 2 emissions must use location-based and market-based factors",
+      "conditions": {
+        "scope_2_emissions": {"gt": 0},
+        "electricity_emission_factors": {"count": {"lt": 2}}
+      },
+      "severity": "high",
+      "auto_apply": true,
+      "required_fields": ["location_based_factor", "market_based_factor", "electricity_consumption"],
+      "validation_rules": ["factor_verification", "consumption_verification"]
+    },
+    {
+      "rule_id": "GENERAL_006",
+      "framework": "GENERAL",
+      "rule_name": "Scope 3 Supply Chain Emissions",
+      "rule_description": "Scope 3 emissions must be calculated for material categories (>5% of total)",
+      "conditions": {
+        "scope_3_emissions": {"gt": 0},
+        "scope_3_categories_covered": {"lt": 8}
+      },
+      "severity": "medium",
+      "auto_apply": true,
+      "required_fields": ["scope_3_categories", "supplier_data", "calculation_methodology"],
+      "validation_rules": ["category_completeness", "supplier_data_verification"],
+      "threshold_values": {"min_categories": 8, "materiality_threshold": 5}
+    },
+    {
+      "rule_id": "GENERAL_007",
+      "framework": "GENERAL",
+      "rule_name": "Third-Party Verification Requirement",
+      "rule_description": "Emission data must be verified by accredited third party for reports >10,000 tCO2e",
+      "conditions": {
+        "total_emissions_tons_co2e": {"gte": 10000},
+        "third_party_verification": {"exists": false}
+      },
+      "severity": "critical",
+      "auto_apply": true,
+      "required_fields": ["verification_body", "verification_report", "verification_date"],
+      "validation_rules": ["verifier_accreditation", "verification_completeness"],
+      "threshold_values": {"verification_threshold": 10000}
+    },
+    {
+      "rule_id": "GENERAL_008",
+      "framework": "GENERAL",
+      "rule_name": "Record Retention and Audit Trail",
+      "rule_description": "All emission data must be retained for minimum 7 years with complete audit trail",
+      "conditions": {
+        "record_retention_years": {"lt": 7},
+        "audit_trail_completeness": {"lt": 100}
+      },
+      "severity": "high",
+      "auto_apply": true,
+      "required_fields": ["data_source", "calculation_steps", "approval_chain", "modification_history"],
+      "validation_rules": ["retention_verification", "audit_trail_completeness"],
+      "threshold_values": {"min_retention_years": 7, "min_audit_trail": 100}
+    },
+    {
+      "rule_id": "GENERAL_009",
+      "framework": "GENERAL",
+      "rule_name": "Baseline Year Establishment",
+      "rule_description": "Organizations must establish baseline year with complete data for target setting",
+      "conditions": {
+        "baseline_year": {"exists": false},
+        "baseline_emissions": {"exists": false}
+      },
+      "severity": "medium",
+      "auto_apply": true,
+      "required_fields": ["baseline_year", "baseline_emissions", "baseline_methodology"],
+      "validation_rules": ["baseline_completeness", "methodology_consistency"]
+    },
+    {
+      "rule_id": "GENERAL_010",
+      "framework": "GENERAL",
+      "rule_name": "Emission Reduction Target Setting",
+      "rule_description": "Organizations must set emission reduction targets aligned with 1.5°C pathway",
+      "conditions": {
+        "emission_reduction_target": {"exists": false},
+        "target_year": {"exists": false}
+      },
+      "severity": "medium",
+      "auto_apply": true,
+      "required_fields": ["reduction_target_percentage", "target_year", "target_scope", "target_methodology"],
+      "validation_rules": ["target_ambition_verification", "scope_coverage_verification"],
+      "threshold_values": {"min_reduction_target": 30, "max_target_year": 2030}
+    },
+    {
+      "rule_id": "GENERAL_011",
+      "framework": "GENERAL",
+      "rule_name": "Carbon Pricing Integration",
+      "rule_description": "Organizations must consider carbon pricing in business decisions (>$50/tCO2e)",
+      "conditions": {
+        "carbon_price_per_ton": {"lt": 50},
+        "carbon_pricing_integration": {"exists": false}
+      },
+      "severity": "medium",
+      "auto_apply": true,
+      "required_fields": ["carbon_price", "pricing_integration_method", "decision_framework"],
+      "validation_rules": ["pricing_verification", "integration_verification"],
+      "threshold_values": {"min_carbon_price": 50}
+    },
+    {
+      "rule_id": "GENERAL_012",
+      "framework": "GENERAL",
+      "rule_name": "Climate Risk Assessment",
+      "rule_description": "Organizations must conduct climate risk assessment for physical and transition risks",
+      "conditions": {
+        "climate_risk_assessment": {"exists": false},
+        "risk_mitigation_plan": {"exists": false}
+      },
+      "severity": "high",
+      "auto_apply": true,
+      "required_fields": ["physical_risk_assessment", "transition_risk_assessment", "risk_mitigation_strategy"],
+      "validation_rules": ["risk_assessment_completeness", "mitigation_plan_verification"]
+    },
+    {
+      "rule_id": "GENERAL_013",
+      "framework": "GENERAL",
+      "rule_name": "Stakeholder Engagement",
+      "rule_description": "Organizations must engage stakeholders on climate strategy and reporting",
+      "conditions": {
+        "stakeholder_engagement": {"exists": false},
+        "engagement_frequency": {"lt": 1}
+      },
+      "severity": "medium",
+      "auto_apply": true,
+      "required_fields": ["stakeholder_mapping", "engagement_plan", "feedback_integration"],
+      "validation_rules": ["engagement_verification", "feedback_processing"],
+      "threshold_values": {"min_engagement_frequency": 1}
+    },
+    {
+      "rule_id": "GENERAL_014",
+      "framework": "GENERAL",
+      "rule_name": "Climate Governance Structure",
+      "rule_description": "Organizations must establish climate governance with board oversight",
+      "conditions": {
+        "climate_governance": {"exists": false},
+        "board_oversight": {"exists": false}
+      },
+      "severity": "high",
+      "auto_apply": true,
+      "required_fields": ["climate_committee", "board_oversight", "management_responsibility"],
+      "validation_rules": ["governance_structure_verification", "oversight_verification"]
+    },
+    {
+      "rule_id": "GENERAL_015",
+      "framework": "GENERAL",
+      "rule_name": "Green Finance Integration",
+      "rule_description": "Organizations must integrate climate considerations into financial planning",
+      "conditions": {
+        "green_finance_integration": {"exists": false},
+        "climate_budget_allocation": {"lt": 5}
+      },
+      "severity": "medium",
+      "auto_apply": true,
+      "required_fields": ["climate_budget", "green_finance_strategy", "investment_criteria"],
+      "validation_rules": ["budget_verification", "strategy_verification"],
+      "threshold_values": {"min_budget_allocation": 5}
+    }
+  ]
+}

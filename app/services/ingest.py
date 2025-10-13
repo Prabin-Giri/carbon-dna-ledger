@@ -3,13 +3,49 @@ Data ingestion services for CSV and PDF parsing
 """
 import csv
 import io
-from datetime import datetime
+from datetime import datetime, date
 from typing import List, Dict, Any, Optional
 import pandas as pd
 import pdfplumber
 from sqlalchemy.orm import Session
 
 from .. import models
+
+def parse_date_string(date_str: str) -> Optional[date]:
+    """Parse various date string formats and return a date object"""
+    if not date_str or not isinstance(date_str, str):
+        return None
+    
+    date_str = date_str.strip()
+    if not date_str:
+        return None
+    
+    # Try different date formats
+    date_formats = [
+        '%Y-%m-%d',           # 2024-01-15
+        '%Y/%m/%d',           # 2024/01/15
+        '%d/%m/%Y',           # 15/01/2024
+        '%m/%d/%Y',           # 01/15/2024
+        '%d-%m-%Y',           # 15-01-2024
+        '%Y-%m-%d %H:%M:%S',  # 2024-01-15 10:30:00
+        '%Y-%m-%dT%H:%M:%S',  # 2024-01-15T10:30:00
+        '%Y-%m-%dT%H:%M:%SZ', # 2024-01-15T10:30:00Z
+        '%d/%m/%y',           # 15/01/24
+        '%m/%d/%y',           # 01/15/24
+        '%d-%m-%y',           # 15-01-24
+        '%Y%m%d',             # 20240115
+        '%d.%m.%Y',           # 15.01.2024
+        '%d.%m.%y',           # 15.01.24
+    ]
+    
+    for fmt in date_formats:
+        try:
+            parsed_datetime = datetime.strptime(date_str, fmt)
+            return parsed_datetime.date()
+        except ValueError:
+            continue
+    
+    return None
 
 def parse_csv(content: bytes, filename: str) -> List[Dict[str, Any]]:
     """Parse CSV content and normalize to standard record format"""
@@ -78,15 +114,10 @@ def normalize_csv_record(row: Dict[str, str], filename: str, row_num: int) -> Op
         if not occurred_at_str:
             return None
             
-        # Try different datetime formats
-        for fmt in ['%Y-%m-%d', '%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S']:
-            try:
-                occurred_at = datetime.strptime(occurred_at_str, fmt)
-                break
-            except ValueError:
-                continue
-        else:
-            return None  # No valid datetime format found
+        # Parse the date string to a date object
+        occurred_at = parse_date_string(occurred_at_str)
+        if not occurred_at:
+            return None  # No valid date format found
         
         # Extract required fields
         supplier = row.get('supplier', '').strip()
@@ -135,7 +166,9 @@ def normalize_pdf_record(parts: List[str], filename: str, page_num: int, line_nu
         if len(parts) < 4:
             return None
         
-        occurred_at = datetime.strptime(parts[0], '%Y-%m-%d')
+        occurred_at = parse_date_string(parts[0])
+        if not occurred_at:
+            return None
         supplier = parts[1]
         activity = parts[2]
         scope = int(parts[3])

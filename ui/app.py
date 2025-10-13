@@ -2,6 +2,14 @@
 Carbon DNA Ledger - Streamlit UI
 Main application with all UI components
 """
+from dotenv import load_dotenv
+load_dotenv()
+
+# Suppress Plotly deprecation warnings
+import warnings
+warnings.filterwarnings('ignore', category=DeprecationWarning, module='plotly')
+warnings.filterwarnings('ignore', message='.*keyword arguments have been deprecated.*')
+
 import streamlit as st
 import requests
 import json
@@ -11,7 +19,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import os
 
-from components import uploader, explorer, details, scenario, analytics, query
+from components import uploader, explorer, details, scenario, analytics, query, human_review, rewards, climate_trace, advanced_compliance_dashboard, enhanced_audit_snapshots, enhanced_compliance_roadmap
 
 # Configure Streamlit page
 st.set_page_config(
@@ -21,8 +29,33 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# API base URL
-API_BASE = os.getenv("API_BASE", "http://localhost:8000")
+# API base URL - Force correct port
+API_BASE = os.getenv("API_BASE", "http://127.0.0.1:8000")
+# Ensure we're using port 8000, not 8001
+if ":8001" in API_BASE:
+    API_BASE = API_BASE.replace(":8001", ":8000")
+    print(f"Fixed API_BASE to: {API_BASE}")
+
+# Force the correct port regardless of environment
+API_BASE = "http://127.0.0.1:8000"
+
+# Debug: Show API base URL
+if st.sidebar.checkbox("🔧 Debug Mode"):
+    st.sidebar.write(f"API Base URL: {API_BASE}")
+    try:
+        import socket
+        host, port = API_BASE.replace("http://", "").split(":")
+        port = int(port)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)
+        result = sock.connect_ex((host, port))
+        sock.close()
+        if result == 0:
+            st.sidebar.success(f"Port {port} is open")
+        else:
+            st.sidebar.error(f"Port {port} is closed")
+    except Exception as e:
+        st.sidebar.error(f"Debug error: {e}")
 
 # Custom CSS for better styling
 st.markdown("""
@@ -38,7 +71,9 @@ st.markdown("""
     padding: 1rem;
     border-radius: 0.5rem;
     border-left: 4px solid #2E8B57;
+    color: #111111; /* ensure text is visible on light background */
 }
+.metric-card h3, .metric-card p { color: #111111; }
 .hash-display {
     font-family: 'Courier New', monospace;
     background-color: #f8f9fa;
@@ -70,20 +105,32 @@ def main():
     st.sidebar.title("Navigation")
     page = st.sidebar.selectbox(
         "Choose a page:",
-        ["📊 Dashboard", "📤 Upload Data", "🔍 Event Explorer", "🧬 Event Details", 
-         "🔄 What-If Scenarios", "📈 Analytics", "❓ Ask Questions"]
+        ["📊 Dashboard", "📤 Upload Data", "🔍 Event Explorer", "🧬 Event Details",
+         "🔄 What-If Scenarios", "📈 Analytics", "🔍 Human Review", "💰 Carbon Rewards",
+         "🌍 Climate TRACE", "🛡️ Compliance Intelligence", "🔍 Enhanced Audit Snapshots", "🗺️ Enhanced Compliance Roadmap", "❓ Ask Questions"]
     )
     
     # API health check
     try:
-        response = requests.get(f"{API_BASE}/", timeout=5)
+        response = requests.get(f"{API_BASE}/", timeout=10)
         if response.status_code == 200:
             st.sidebar.success("✅ API Connected")
         else:
-            st.sidebar.error("❌ API Error")
-    except:
+            st.sidebar.error(f"❌ API Error: {response.status_code}")
+            st.error(f"API returned status code {response.status_code}. Please check the server logs.")
+            return
+    except requests.exceptions.ConnectionError as e:
         st.sidebar.error("❌ API Unreachable")
-        st.error("Cannot connect to backend API. Please ensure the FastAPI server is running on port 8000.")
+        st.error(f"Cannot connect to backend API at {API_BASE}. Please ensure the FastAPI server is running on port 8000.")
+        st.error(f"Connection error: {str(e)}")
+        return
+    except requests.exceptions.Timeout as e:
+        st.sidebar.error("❌ API Timeout")
+        st.error(f"API request timed out. Please check if the server is running.")
+        return
+    except Exception as e:
+        st.sidebar.error("❌ API Error")
+        st.error(f"Unexpected error connecting to API: {str(e)}")
         return
     
     # Page routing
@@ -99,6 +146,18 @@ def main():
         scenario.show_scenario_page(API_BASE)
     elif page == "📈 Analytics":
         analytics.show_analytics_page(API_BASE)
+    elif page == "🔍 Human Review":
+        human_review.show_human_review_page()
+    elif page == "💰 Carbon Rewards":
+        rewards.show_rewards_page(API_BASE)
+    elif page == "🌍 Climate TRACE":
+        climate_trace.show_climate_trace_page(API_BASE)
+    elif page == "🛡️ Compliance Intelligence":
+        advanced_compliance_dashboard.show_advanced_compliance_dashboard(API_BASE)
+    elif page == "🔍 Enhanced Audit Snapshots":
+        enhanced_audit_snapshots.show_enhanced_audit_snapshots(API_BASE)
+    elif page == "🗺️ Enhanced Compliance Roadmap":
+        enhanced_compliance_roadmap.show_enhanced_compliance_roadmap(API_BASE)
     elif page == "❓ Ask Questions":
         query.show_query_page(API_BASE)
 
@@ -107,22 +166,22 @@ def show_dashboard():
     st.header("📊 Dashboard Overview")
     
     try:
-        # Get recent events for dashboard
-        response = requests.get(f"{API_BASE}/api/events", params={"limit": 10})
+        # Get recent emission records for dashboard
+        response = requests.get(f"{API_BASE}/api/emission-records", params={"limit": 10000})
         if response.status_code == 200:
-            events = response.json()
+            records = response.json()
             
-            if events:
+            if records:
                 # Key metrics
-                total_events = len(events)
-                total_emissions = sum(event['result_kgco2e'] for event in events)
-                avg_uncertainty = sum(event['uncertainty_pct'] for event in events) / len(events)
+                total_records = len(records)
+                total_emissions = sum(record['emissions_kgco2e'] for record in records)
+                avg_quality = sum(record['data_quality_score'] for record in records) / len(records)
                 
                 col1, col2, col3 = st.columns(3)
                 
                 with col1:
                     st.markdown(
-                        f'<div class="metric-card"><h3>{total_events}</h3><p>Recent Events</p></div>',
+                        f'<div class="metric-card"><h3>{total_records}</h3><p>Emission Records</p></div>',
                         unsafe_allow_html=True
                     )
                 
@@ -134,20 +193,24 @@ def show_dashboard():
                 
                 with col3:
                     st.markdown(
-                        f'<div class="metric-card"><h3>{avg_uncertainty:.1f}%</h3><p>Avg Uncertainty</p></div>',
+                        f'<div class="metric-card"><h3>{avg_quality:.1f}</h3><p>Avg Quality Score</p></div>',
                         unsafe_allow_html=True
                     )
                 
                 st.markdown("---")
                 
-                # Recent events table
-                st.subheader("🔄 Recent Events")
-                df = pd.DataFrame(events)
-                df['occurred_at'] = pd.to_datetime(df['occurred_at']).dt.strftime('%Y-%m-%d %H:%M')
+                # Recent records table
+                st.subheader("🔄 Recent Emission Records")
+                df = pd.DataFrame(records)
+                df['date'] = pd.to_datetime(df['date']).dt.strftime('%Y-%m-%d')
+                
+                # Display relevant columns
+                display_columns = ['date', 'supplier_name', 'activity_type', 'emissions_kgco2e', 'data_quality_score']
+                available_columns = [col for col in display_columns if col in df.columns]
                 
                 st.dataframe(
-                    df[['occurred_at', 'supplier_name', 'activity', 'result_kgco2e', 'uncertainty_pct']],
-                    use_container_width=True
+                    df[available_columns],
+                    width='stretch'
                 )
                 
                 # Quick charts
@@ -157,46 +220,48 @@ def show_dashboard():
                 
                 with col1:
                     # Emissions by supplier
-                    supplier_totals = df.groupby('supplier_name')['result_kgco2e'].sum().reset_index()
-                    fig = px.bar(
-                        supplier_totals, 
-                        x='supplier_name', 
-                        y='result_kgco2e',
-                        title="Emissions by Supplier"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
+                    if 'supplier_name' in df.columns and 'emissions_kgco2e' in df.columns:
+                        supplier_totals = df.groupby('supplier_name')['emissions_kgco2e'].sum().reset_index()
+                        fig = px.bar(
+                            supplier_totals, 
+                            x='supplier_name', 
+                            y='emissions_kgco2e',
+                            title="Emissions by Supplier"
+                        )
+                        st.plotly_chart(fig, width='stretch')
                 
                 with col2:
                     # Scope distribution
-                    scope_dist = df['scope'].value_counts().reset_index()
-                    scope_dist.columns = ['scope', 'count']
-                    scope_dist['scope'] = 'Scope ' + scope_dist['scope'].astype(str)
-                    
-                    fig = px.pie(
-                        scope_dist, 
-                        values='count', 
-                        names='scope',
-                        title="Events by Scope"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
+                    if 'scope' in df.columns:
+                        scope_dist = df['scope'].value_counts().reset_index()
+                        scope_dist.columns = ['scope', 'count']
+                        scope_dist['scope'] = 'Scope ' + scope_dist['scope'].astype(str)
+                        
+                        fig = px.pie(
+                            scope_dist, 
+                            values='count', 
+                            names='scope',
+                            title="Records by Scope"
+                        )
+                        st.plotly_chart(fig, width='stretch')
             
             else:
-                st.info("No events found. Upload some data to get started!")
+                st.info("No emission records found. Upload some data to get started!")
                 
                 # Show demo instructions
                 st.subheader("🚀 Quick Start")
                 st.markdown("""
                 1. **Upload Data**: Use the Upload page to ingest CSV or PDF files
-                2. **Explore Events**: Browse your carbon events with filters
-                3. **View DNA Details**: See the complete audit trail for each event
+                2. **Explore Records**: Browse your emission records with filters
+                3. **View Details**: See detailed information for each record
                 4. **Run Scenarios**: Test what-if changes to parameters
-                5. **Analyze Trends**: View analytics and top emitters
+                5. **Analyze Trends**: View analytics and insights
                 
-                **Demo Data**: The system comes with sample data from OceanLift and GridCo.
+                **Demo Data**: The system comes with sample data from various suppliers.
                 """)
         
         else:
-            st.error(f"Failed to fetch events: {response.status_code}")
+            st.error(f"Failed to fetch emission records: {response.status_code}")
             
     except Exception as e:
         st.error(f"Dashboard error: {str(e)}")

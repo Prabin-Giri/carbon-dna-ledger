@@ -24,14 +24,32 @@ def show_available_templates():
         **🏆 Top Suppliers in Period**
         - Find the highest emitting suppliers in a specified time period
         - Parameters: period (month/quarter/year), limit (number of results)
+        - Note: Uses record date or creation date if record date is missing
         
         **📈 Largest Month-over-Month Increase**  
         - Identify suppliers with the biggest emission increases
         - Parameters: None (automatically uses recent data)
         
         **⚠️ Events with Highest Uncertainty**
-        - Find events with the most uncertainty or quality issues
+        - Find events with the most uncertainty or quality issues (data_quality_score < 90)
         - Parameters: limit (number of results)
+        - Note: Uncertainty = 100 - data_quality_score, so higher uncertainty means lower quality
+        
+        **📊 Total Emissions by Activity Type**
+        - Analyze emissions breakdown by activity category
+        - Parameters: limit (number of activity types)
+        
+        **📈 Recent Emission Trends**
+        - View daily emission trends over time
+        - Parameters: days (time period to analyze)
+        
+        **📋 All Suppliers Summary**
+        - View all suppliers with emissions (excludes zero-emission suppliers)
+        - Parameters: limit (number of suppliers)
+        
+        **📋 All Suppliers Including Zeros**
+        - View all suppliers including those with zero emissions
+        - Parameters: limit (number of suppliers)
         
         These templates ensure safe, pre-validated queries while providing full SQL transparency.
         """)
@@ -42,9 +60,13 @@ def show_query_interface(api_base):
     
     # Template selection
     template_options = {
-        "Top suppliers in period": "Find the highest emitting suppliers",
+        "Top suppliers in period": "Find the highest emitting suppliers in a specific time period",
         "Largest month-over-month increase": "Find suppliers with biggest emission increases", 
-        "Events with highest uncertainty": "Find events with most uncertainty or quality issues"
+        "Events with highest uncertainty": "Find events with most uncertainty or quality issues",
+        "Total emissions by activity type": "Analyze emissions by activity category",
+        "Recent emission trends": "View daily emission trends over time",
+        "All suppliers summary": "View all suppliers with emissions (excludes zero-emission suppliers)",
+        "All suppliers including zeros": "View all suppliers including those with zero emissions"
     }
     
     selected_template = st.selectbox(
@@ -95,6 +117,42 @@ def collect_template_parameters(template_name):
             max_value=100,
             value=20,
             help="How many high-uncertainty events to return"
+        )
+    
+    elif template_name == "Total emissions by activity type":
+        params['limit'] = st.slider(
+            "Number of Activity Types",
+            min_value=5,
+            max_value=20,
+            value=10,
+            help="How many activity types to show"
+        )
+    
+    elif template_name == "Recent emission trends":
+        params['days'] = st.slider(
+            "Time Period (Days)",
+            min_value=7,
+            max_value=90,
+            value=30,
+            help="How many days back to analyze"
+        )
+    
+    elif template_name == "All suppliers summary":
+        params['limit'] = st.slider(
+            "Number of Suppliers",
+            min_value=5,
+            max_value=50,
+            value=20,
+            help="How many suppliers to show (excludes zero-emission suppliers)"
+        )
+    
+    elif template_name == "All suppliers including zeros":
+        params['limit'] = st.slider(
+            "Number of Suppliers",
+            min_value=5,
+            max_value=50,
+            value=20,
+            help="How many suppliers to show (includes zero-emission suppliers)"
         )
     
     return params
@@ -177,9 +235,17 @@ def show_results_data(rows, template_name):
         show_delta_results(df)
     elif template_name == "Events with highest uncertainty":
         show_uncertainty_results(df)
+    elif template_name == "Total emissions by activity type":
+        show_activity_results(df)
+    elif template_name == "Recent emission trends":
+        show_trends_results(df)
+    elif template_name == "All suppliers summary":
+        show_all_suppliers_results(df)
+    elif template_name == "All suppliers including zeros":
+        show_all_suppliers_results(df)
     else:
         # Generic table display
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width='stretch')
     
     # Export options
     show_export_options(df, template_name)
@@ -202,7 +268,7 @@ def show_top_suppliers_results(df):
             "event_count": st.column_config.NumberColumn("Events"),
             "avg_uncertainty": st.column_config.NumberColumn("Avg Uncertainty (%)", format="%.1f")
         },
-        use_container_width=True,
+        width='stretch',
         hide_index=True
     )
     
@@ -219,7 +285,7 @@ def show_top_suppliers_results(df):
         )
         
         fig.update_layout(xaxis_tickangle=45)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
 def show_delta_results(df):
     """Display delta/increase results"""
@@ -238,7 +304,7 @@ def show_delta_results(df):
             "delta_kgco2e": st.column_config.NumberColumn("Change (kg CO₂e)", format="%.1f"),
             "pct_change": st.column_config.NumberColumn("Change (%)", format="%.1f")
         },
-        use_container_width=True,
+        width='stretch',
         hide_index=True
     )
     
@@ -281,7 +347,7 @@ def show_uncertainty_results(df):
             "result_kgco2e": st.column_config.NumberColumn("Emissions (kg CO₂e)", format="%.1f"),
             "quality_indicator": st.column_config.TextColumn("Quality")
         },
-        use_container_width=True,
+        width='stretch',
         hide_index=True
     )
     
@@ -297,6 +363,156 @@ def show_uncertainty_results(df):
         
         with col2:
             st.metric("High Uncertainty Events", high_uncertainty_count)
+
+def show_activity_results(df):
+    """Display activity type results with visualization"""
+    # Format numeric columns
+    if 'total_emissions' in df.columns:
+        df['total_emissions'] = df['total_emissions'].round(1)
+    
+    if 'avg_emissions' in df.columns:
+        df['avg_emissions'] = df['avg_emissions'].round(1)
+    
+    if 'avg_quality' in df.columns:
+        df['avg_quality'] = df['avg_quality'].round(1)
+    
+    # Display table
+    st.dataframe(
+        df,
+        column_config={
+            "activity_type": st.column_config.TextColumn("Activity Type"),
+            "record_count": st.column_config.NumberColumn("Records"),
+            "total_emissions": st.column_config.NumberColumn("Total Emissions (kg CO₂e)", format="%.1f"),
+            "avg_emissions": st.column_config.NumberColumn("Avg Emissions (kg CO₂e)", format="%.1f"),
+            "avg_quality": st.column_config.NumberColumn("Avg Quality Score", format="%.1f")
+        },
+        width='stretch',
+        hide_index=True
+    )
+    
+    # Visualization
+    if len(df) > 1:
+        import plotly.express as px
+        
+        fig = px.pie(
+            df,
+            values='total_emissions',
+            names='activity_type',
+            title="Emissions Distribution by Activity Type"
+        )
+        st.plotly_chart(fig, width='stretch')
+
+def show_trends_results(df):
+    """Display trends results with time series visualization"""
+    # Format numeric columns
+    if 'daily_emissions' in df.columns:
+        df['daily_emissions'] = df['daily_emissions'].round(1)
+    
+    if 'avg_quality' in df.columns:
+        df['avg_quality'] = df['avg_quality'].round(1)
+    
+    # Convert date column
+    if 'date' in df.columns:
+        df['date'] = pd.to_datetime(df['date'])
+    
+    # Display table
+    st.dataframe(
+        df,
+        column_config={
+            "date": st.column_config.DateColumn("Date"),
+            "daily_records": st.column_config.NumberColumn("Daily Records"),
+            "daily_emissions": st.column_config.NumberColumn("Daily Emissions (kg CO₂e)", format="%.1f"),
+            "avg_quality": st.column_config.NumberColumn("Avg Quality Score", format="%.1f")
+        },
+        width='stretch',
+        hide_index=True
+    )
+    
+    # Time series visualization
+    if len(df) > 1 and 'date' in df.columns:
+        import plotly.express as px
+        
+        fig = px.line(
+            df,
+            x='date',
+            y='daily_emissions',
+            title="Daily Emission Trends",
+            labels={'daily_emissions': 'Daily Emissions (kg CO₂e)', 'date': 'Date'}
+        )
+        fig.update_layout(xaxis_title="Date", yaxis_title="Daily Emissions (kg CO₂e)")
+        st.plotly_chart(fig, width='stretch')
+        
+        # Quality trends
+        fig2 = px.line(
+            df,
+            x='date',
+            y='avg_quality',
+            title="Daily Data Quality Trends",
+            labels={'avg_quality': 'Average Quality Score', 'date': 'Date'}
+        )
+        fig2.update_layout(xaxis_title="Date", yaxis_title="Average Quality Score")
+        st.plotly_chart(fig2, width='stretch')
+
+def show_all_suppliers_results(df):
+    """Display all suppliers results with date ranges"""
+    # Format numeric columns
+    if 'total_kgco2e' in df.columns:
+        df['total_kgco2e'] = df['total_kgco2e'].round(1)
+    
+    if 'avg_uncertainty' in df.columns:
+        df['avg_uncertainty'] = df['avg_uncertainty'].round(1)
+    
+    # Format date columns
+    if 'earliest_date' in df.columns:
+        df['earliest_date'] = pd.to_datetime(df['earliest_date']).dt.strftime('%Y-%m-%d')
+    if 'latest_date' in df.columns:
+        df['latest_date'] = pd.to_datetime(df['latest_date']).dt.strftime('%Y-%m-%d')
+    
+    # Display table
+    st.dataframe(
+        df,
+        column_config={
+            "supplier_name": st.column_config.TextColumn("Supplier"),
+            "total_kgco2e": st.column_config.NumberColumn("Total Emissions (kg CO₂e)", format="%.1f"),
+            "event_count": st.column_config.NumberColumn("Records"),
+            "avg_uncertainty": st.column_config.NumberColumn("Avg Uncertainty (%)", format="%.1f"),
+            "earliest_date": st.column_config.TextColumn("First Record"),
+            "latest_date": st.column_config.TextColumn("Latest Record")
+        },
+        width='stretch',
+        hide_index=True
+    )
+    
+    # Summary statistics
+    if not df.empty:
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            total_emissions = df['total_kgco2e'].sum()
+            st.metric("Total Emissions", f"{total_emissions:,.1f} kg CO₂e")
+        
+        with col2:
+            total_records = df['event_count'].sum()
+            st.metric("Total Records", f"{total_records:,}")
+        
+        with col3:
+            avg_uncertainty = df['avg_uncertainty'].mean()
+            st.metric("Average Uncertainty", f"{avg_uncertainty:.1f}%")
+    
+    # Visualization
+    if len(df) > 1:
+        import plotly.express as px
+        
+        fig = px.bar(
+            df.head(10),  # Show top 10 in chart
+            x='supplier_name',
+            y='total_kgco2e',
+            title="All Suppliers - Total Emissions",
+            labels={'total_kgco2e': 'Total Emissions (kg CO₂e)', 'supplier_name': 'Supplier'}
+        )
+        
+        fig.update_layout(xaxis_tickangle=45)
+        st.plotly_chart(fig, width='stretch')
 
 def show_export_options(df, template_name):
     """Show export options for query results"""

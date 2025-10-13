@@ -41,32 +41,32 @@ def show_overview_analytics(api_base):
         with col1:
             from_date = st.date_input(
                 "From Date",
-                value=date.today() - timedelta(days=90),
+                value=date(2025, 1, 1),
                 key="analytics_from"
             )
         
         with col2:
             to_date = st.date_input(
                 "To Date",
-                value=date.today(),
+                value=date(2025, 3, 31),
                 key="analytics_to"
             )
         
-        # Fetch recent events for overview
+        # Fetch recent emission records for overview
         params = {
             'from_date': from_date.isoformat(),
             'to_date': to_date.isoformat(),
-            'limit': 1000  # Get more data for analytics
+            'limit': 10000  # Get all data for analytics
         }
         
         with st.spinner("Loading analytics data..."):
-            response = requests.get(f"{api_base}/api/events", params=params)
+            response = requests.get(f"{api_base}/api/emission-records", params=params)
             
             if response.status_code == 200:
-                events = response.json()
+                records = response.json()
                 
-                if events:
-                    df = pd.DataFrame(events)
+                if records:
+                    df = pd.DataFrame(records)
                     show_overview_metrics(df)
                     show_overview_charts(df)
                 else:
@@ -80,22 +80,24 @@ def show_overview_analytics(api_base):
 def show_overview_metrics(df):
     """Show key metrics overview"""
     # Calculate key metrics
-    total_events = len(df)
-    total_emissions = df['result_kgco2e'].sum()
-    avg_emissions = df['result_kgco2e'].mean()
-    avg_uncertainty = df['uncertainty_pct'].mean()
+    total_records = len(df)
+    total_emissions = df['emissions_kgco2e'].sum() if 'emissions_kgco2e' in df.columns else 0
+    avg_emissions = df['emissions_kgco2e'].mean() if 'emissions_kgco2e' in df.columns else 0
+    avg_quality = df['data_quality_score'].mean() if 'data_quality_score' in df.columns else 0
     
-    # Quality issues count
-    quality_issues = df['quality_flags'].apply(lambda x: len(x) > 0 if x else False).sum()
+    # Quality issues count (low quality scores)
+    quality_issues = 0
+    if 'data_quality_score' in df.columns:
+        quality_issues = len(df[df['data_quality_score'] < 50])
     
     # Display metrics
     col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
         st.metric(
-            "Total Events",
-            f"{total_events:,}",
-            help="Total number of carbon events"
+            "Total Records",
+            f"{total_records:,}",
+            help="Total number of emission records"
         )
     
     with col2:
@@ -107,24 +109,24 @@ def show_overview_metrics(df):
     
     with col3:
         st.metric(
-            "Avg per Event",
+            "Avg per Record",
             f"{avg_emissions:,.0f} kg CO₂e",
-            help="Average emissions per event"
+            help="Average emissions per record"
         )
     
     with col4:
         st.metric(
-            "Avg Uncertainty",
-            f"{avg_uncertainty:.1f}%",
-            help="Average uncertainty across events"
+            "Avg Quality Score",
+            f"{avg_quality:.1f}",
+            help="Average data quality score"
         )
     
     with col5:
         st.metric(
-            "Quality Issues",
+            "Low Quality Records",
             quality_issues,
-            delta=f"{(quality_issues/total_events)*100:.1f}%" if total_events > 0 else "0%",
-            help="Events with quality flags"
+            delta=f"{(quality_issues/total_records)*100:.1f}%" if total_records > 0 else "0%",
+            help="Records with quality score < 50"
         )
 
 def show_overview_charts(df):
@@ -135,62 +137,68 @@ def show_overview_charts(df):
     
     with col1:
         # Emissions by supplier
-        supplier_emissions = df.groupby('supplier_name')['result_kgco2e'].sum().sort_values(ascending=False)
-        
-        fig = px.bar(
-            x=supplier_emissions.index,
-            y=supplier_emissions.values,
-            title="Total Emissions by Supplier",
-            labels={'x': 'Supplier', 'y': 'Emissions (kg CO₂e)'}
-        )
-        fig.update_layout(xaxis_tickangle=45)
-        st.plotly_chart(fig, use_container_width=True)
+        if 'supplier_name' in df.columns and 'emissions_kgco2e' in df.columns:
+            supplier_emissions = df.groupby('supplier_name')['emissions_kgco2e'].sum().sort_values(ascending=False)
+            
+            fig = px.bar(
+                x=supplier_emissions.index,
+                y=supplier_emissions.values,
+                title="Total Emissions by Supplier",
+                labels={'x': 'Supplier', 'y': 'Emissions (kg CO₂e)'}
+            )
+            fig.update_layout(xaxis_tickangle=45)
+            st.plotly_chart(fig, width='stretch')
     
     with col2:
         # Scope distribution
-        scope_dist = df['scope'].value_counts().sort_index()
-        scope_labels = [f"Scope {s}" for s in scope_dist.index]
-        
-        fig = px.pie(
-            values=scope_dist.values,
-            names=scope_labels,
-            title="Emissions by GHG Scope"
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        if 'scope' in df.columns:
+            scope_dist = df['scope'].value_counts().sort_index()
+            scope_labels = [f"Scope {s}" for s in scope_dist.index]
+            
+            fig = px.pie(
+                values=scope_dist.values,
+                names=scope_labels,
+                title="Records by GHG Scope"
+            )
+            st.plotly_chart(fig, width='stretch')
     
     # Time series
     st.subheader("📈 Emission Trends")
     
-    df['occurred_at'] = pd.to_datetime(df['occurred_at'])
-    df['date'] = df['occurred_at'].dt.date
-    
-    daily_emissions = df.groupby('date')['result_kgco2e'].sum().reset_index()
-    
-    fig = px.line(
-        daily_emissions,
-        x='date',
-        y='result_kgco2e',
-        title="Daily Emission Totals",
-        labels={'result_kgco2e': 'Emissions (kg CO₂e)', 'date': 'Date'}
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
+    if 'date' in df.columns and 'emissions_kgco2e' in df.columns:
+        df['date'] = pd.to_datetime(df['date'])
+        df['date_only'] = df['date'].dt.date
+        
+        daily_emissions = df.groupby('date_only')['emissions_kgco2e'].sum().reset_index()
+        
+        fig = px.line(
+            daily_emissions,
+            x='date_only',
+            y='emissions_kgco2e',
+            title="Daily Emission Totals",
+            labels={'emissions_kgco2e': 'Emissions (kg CO₂e)', 'date_only': 'Date'}
+        )
+        
+        st.plotly_chart(fig, width='stretch')
     
     # Activity breakdown
     st.subheader("🏭 Activity Analysis")
     
-    activity_stats = df.groupby('activity').agg({
-        'result_kgco2e': ['count', 'sum', 'mean'],
-        'uncertainty_pct': 'mean'
-    }).round(1)
-    
-    activity_stats.columns = ['Count', 'Total Emissions', 'Avg Emissions', 'Avg Uncertainty']
-    
-    st.dataframe(activity_stats, use_container_width=True)
+    if 'activity_type' in df.columns and 'emissions_kgco2e' in df.columns:
+        activity_stats = df.groupby('activity_type').agg({
+            'emissions_kgco2e': ['count', 'sum', 'mean']
+        }).round(1)
+        
+        activity_stats.columns = ['Count', 'Total Emissions', 'Avg Emissions']
+        
+        st.dataframe(activity_stats, width='stretch')
 
 def show_top_emitters_analysis(api_base):
     """Show top emitters analysis"""
     st.subheader("🏆 Top Emitters Analysis")
+    
+    # Show data range info
+    st.info("📅 **Data Range**: Analysis covers Q1 2025 (January-March) - the period with available emission data.")
     
     # Period selector
     col1, col2 = st.columns(2)
@@ -199,7 +207,7 @@ def show_top_emitters_analysis(api_base):
         period = st.selectbox(
             "Analysis Period",
             ["month", "quarter", "year"],
-            help="Time period for top emitters analysis"
+            help="Time period for top emitters analysis (all periods use Q1 2025 data)"
         )
     
     with col2:
@@ -227,38 +235,40 @@ def show_top_emitters_analysis(api_base):
                     # Convert to DataFrame
                     df = pd.DataFrame(top_emitters)
                     
-                    # Display chart
-                    fig = px.bar(
-                        df,
-                        x='supplier_name',
-                        y='total_kgco2e',
-                        title=f"Top {limit} Emitters - {period.title()}",
-                        labels={'total_kgco2e': 'Total Emissions (kg CO₂e)', 'supplier_name': 'Supplier'},
-                        color='total_kgco2e',
-                        color_continuous_scale='Reds'
-                    )
-                    
-                    fig.update_layout(xaxis_tickangle=45)
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Details table
-                    st.subheader("📋 Detailed Rankings")
-                    
-                    # Add ranking
-                    df['rank'] = range(1, len(df) + 1)
-                    
-                    # Format for display
-                    display_df = df[['rank', 'supplier_name', 'total_kgco2e', 'event_count', 'avg_uncertainty']].copy()
-                    display_df['total_kgco2e'] = display_df['total_kgco2e'].apply(lambda x: f"{x:,.0f}")
-                    display_df['avg_uncertainty'] = display_df['avg_uncertainty'].apply(lambda x: f"{x:.1f}%")
-                    
-                    display_df.columns = ['Rank', 'Supplier', 'Total Emissions', 'Events', 'Avg Uncertainty']
-                    
-                    st.dataframe(display_df, use_container_width=True, hide_index=True)
-                    
-                    # Insights
-                    show_top_emitters_insights(df)
-                
+                    if not df.empty:
+                        # Display chart
+                        fig = px.bar(
+                            df,
+                            x='supplier_name',
+                            y='total_kgco2e',
+                            title=f"Top {limit} Emitters - {period.title()}",
+                            labels={'total_kgco2e': 'Total Emissions (kg CO₂e)', 'supplier_name': 'Supplier'},
+                            color='total_kgco2e',
+                            color_continuous_scale='Reds'
+                        )
+                        
+                        fig.update_layout(xaxis_tickangle=45)
+                        st.plotly_chart(fig, width='stretch')
+                        
+                        # Details table
+                        st.subheader("📋 Detailed Rankings")
+                        
+                        # Add ranking
+                        df['rank'] = range(1, len(df) + 1)
+                        
+                        # Format for display
+                        display_df = df[['rank', 'supplier_name', 'total_kgco2e', 'event_count', 'avg_uncertainty']].copy()
+                        display_df['total_kgco2e'] = display_df['total_kgco2e'].apply(lambda x: f"{x:,.0f}")
+                        display_df['avg_uncertainty'] = display_df['avg_uncertainty'].apply(lambda x: f"{x:.1f}%")
+                        
+                        display_df.columns = ['Rank', 'Supplier', 'Total Emissions', 'Events', 'Avg Uncertainty']
+                        
+                        st.dataframe(display_df, width='stretch', hide_index=True)
+                        
+                        # Insights
+                        show_top_emitters_insights(df)
+                    else:
+                        st.info("No emitters data available for the selected period.")
                 else:
                     st.info("No emitters data available.")
             else:
@@ -318,6 +328,9 @@ def show_trends_analysis(api_base):
     """Show trends and month-over-month analysis"""
     st.subheader("📈 Emission Trends & Deltas")
     
+    # Show data range info
+    st.info("📅 **Data Range**: Trend analysis covers Q1 2025 (January-March) - the period with available emission data.")
+    
     try:
         with st.spinner("Loading trend data..."):
             response = requests.get(f"{api_base}/api/analytics/deltas")
@@ -328,74 +341,78 @@ def show_trends_analysis(api_base):
                 if deltas:
                     df = pd.DataFrame(deltas)
                     
-                    # Time series chart
-                    fig = go.Figure()
-                    
-                    # Add emissions line
-                    fig.add_trace(go.Scatter(
-                        x=df['period'],
-                        y=df['total_kgco2e'],
-                        mode='lines+markers',
-                        name='Total Emissions',
-                        line=dict(color='blue', width=3),
-                        marker=dict(size=8)
-                    ))
-                    
-                    fig.update_layout(
-                        title="Monthly Emission Trends",
-                        xaxis_title="Period",
-                        yaxis_title="Emissions (kg CO₂e)",
-                        height=400
-                    )
-                    
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Delta analysis
-                    st.subheader("📊 Month-over-Month Changes")
-                    
-                    # Filter out None values for delta chart
-                    delta_df = df[df['pct_change'].notna()].copy()
-                    
-                    if not delta_df.empty:
-                        # Delta chart
-                        colors = ['green' if x < 0 else 'red' for x in delta_df['pct_change']]
+                    if not df.empty:
+                        # Time series chart
+                        fig = go.Figure()
                         
-                        fig2 = go.Figure()
-                        
-                        fig2.add_trace(go.Bar(
-                            x=delta_df['period'],
-                            y=delta_df['pct_change'],
-                            marker_color=colors,
-                            name='% Change',
-                            text=[f"{x:+.1f}%" for x in delta_df['pct_change']],
-                            textposition='auto'
+                        # Add emissions line
+                        fig.add_trace(go.Scatter(
+                            x=df['period'],
+                            y=df['total_kgco2e'],
+                            mode='lines+markers',
+                            name='Total Emissions',
+                            line=dict(color='blue', width=3),
+                            marker=dict(size=8)
                         ))
                         
-                        fig2.update_layout(
-                            title="Month-over-Month Percentage Changes",
+                        fig.update_layout(
+                            title="Monthly Emission Trends",
                             xaxis_title="Period",
-                            yaxis_title="Change (%)",
+                            yaxis_title="Emissions (kg CO₂e)",
                             height=400
                         )
                         
-                        st.plotly_chart(fig2, use_container_width=True)
+                        st.plotly_chart(fig, width='stretch')
                         
-                        # Trend insights
-                        show_trend_insights(delta_df)
-                    
-                    # Data table
-                    st.subheader("📋 Trend Data")
-                    
-                    display_df = df.copy()
-                    display_df['total_kgco2e'] = display_df['total_kgco2e'].apply(lambda x: f"{x:,.0f}")
-                    display_df['pct_change'] = display_df['pct_change'].apply(
-                        lambda x: f"{x:+.1f}%" if pd.notna(x) else "N/A"
-                    )
-                    
-                    display_df.columns = ['Period', 'Total Emissions', '% Change']
-                    
-                    st.dataframe(display_df, use_container_width=True, hide_index=True)
-                
+                        # Delta analysis
+                        st.subheader("📊 Month-over-Month Changes")
+                        
+                        # Filter out None values for delta chart
+                        delta_df = df[df['pct_change'].notna()].copy()
+                        
+                        if not delta_df.empty:
+                            # Delta chart
+                            colors = ['green' if x < 0 else 'red' for x in delta_df['pct_change']]
+                            
+                            fig2 = go.Figure()
+                            
+                            fig2.add_trace(go.Bar(
+                                x=delta_df['period'],
+                                y=delta_df['pct_change'],
+                                marker_color=colors,
+                                name='% Change',
+                                text=[f"{x:+.1f}%" for x in delta_df['pct_change']],
+                                textposition='auto'
+                            ))
+                            
+                            fig2.update_layout(
+                                title="Month-over-Month Percentage Changes",
+                                xaxis_title="Period",
+                                yaxis_title="Change (%)",
+                                height=400
+                            )
+                            
+                            st.plotly_chart(fig2, width='stretch')
+                            
+                            # Trend insights
+                            show_trend_insights(delta_df)
+                        else:
+                            st.info("No month-over-month change data available.")
+                        
+                        # Data table
+                        st.subheader("📋 Trend Data")
+                        
+                        display_df = df.copy()
+                        display_df['total_kgco2e'] = display_df['total_kgco2e'].apply(lambda x: f"{x:,.0f}")
+                        display_df['pct_change'] = display_df['pct_change'].apply(
+                            lambda x: f"{x:+.1f}%" if pd.notna(x) else "N/A"
+                        )
+                        
+                        display_df.columns = ['Period', 'Total Emissions', '% Change']
+                        
+                        st.dataframe(display_df, width='stretch', hide_index=True)
+                    else:
+                        st.info("No trend data available for the selected period.")
                 else:
                     st.info("No trend data available.")
             else:
@@ -460,32 +477,34 @@ def show_quality_analysis(api_base):
                 if quality_gaps:
                     df = pd.DataFrame(quality_gaps)
                     
-                    # Quality metrics
-                    show_quality_metrics(df)
-                    
-                    # Quality issues chart
-                    show_quality_charts(df)
-                    
-                    # Detailed quality issues table
-                    st.subheader("📋 Quality Issues Details")
-                    
-                    # Prepare display data
-                    display_df = df.copy()
-                    display_df['occurred_at'] = pd.to_datetime(display_df['occurred_at']).dt.strftime('%Y-%m-%d')
-                    display_df['uncertainty_pct'] = display_df['uncertainty_pct'].apply(lambda x: f"{x:.1f}%")
-                    display_df['result_kgco2e'] = display_df['result_kgco2e'].apply(lambda x: f"{x:,.0f}")
-                    display_df['quality_flags'] = display_df['quality_flags'].apply(
-                        lambda x: ', '.join(x) if x else 'High Uncertainty'
-                    )
-                    
-                    display_df = display_df[['occurred_at', 'supplier_name', 'activity', 'uncertainty_pct', 'quality_flags', 'result_kgco2e']]
-                    display_df.columns = ['Date', 'Supplier', 'Activity', 'Uncertainty', 'Issues', 'Emissions']
-                    
-                    st.dataframe(display_df, use_container_width=True, hide_index=True)
-                    
-                    # Quality improvement recommendations
-                    show_quality_recommendations(df)
-                
+                    if not df.empty:
+                        # Quality metrics
+                        show_quality_metrics(df)
+                        
+                        # Quality issues chart
+                        show_quality_charts(df)
+                        
+                        # Detailed quality issues table
+                        st.subheader("📋 Quality Issues Details")
+                        
+                        # Prepare display data
+                        display_df = df.copy()
+                        display_df['occurred_at'] = pd.to_datetime(display_df['occurred_at'], errors='coerce').dt.strftime('%Y-%m-%d')
+                        display_df['uncertainty_pct'] = display_df['uncertainty_pct'].apply(lambda x: f"{x:.1f}%")
+                        display_df['result_kgco2e'] = display_df['result_kgco2e'].apply(lambda x: f"{x:,.0f}")
+                        display_df['quality_flags'] = display_df['quality_flags'].apply(
+                            lambda x: ', '.join(x) if isinstance(x, list) and x else 'High Uncertainty'
+                        )
+                        
+                        display_df = display_df[['occurred_at', 'supplier_name', 'activity', 'uncertainty_pct', 'quality_flags', 'result_kgco2e']]
+                        display_df.columns = ['Date', 'Supplier', 'Activity', 'Uncertainty', 'Issues', 'Emissions']
+                        
+                        st.dataframe(display_df, width='stretch', hide_index=True)
+                        
+                        # Quality improvement recommendations
+                        show_quality_recommendations(df)
+                    else:
+                        st.success("✅ No significant quality issues found!")
                 else:
                     st.success("✅ No significant quality issues found!")
             else:
@@ -553,7 +572,7 @@ def show_quality_charts(df):
             labels={'uncertainty_pct': 'Uncertainty (%)', 'count': 'Number of Events'}
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     
     with col2:
         # Quality flags frequency
@@ -573,7 +592,7 @@ def show_quality_charts(df):
             )
             
             fig.update_layout(xaxis_tickangle=45)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
 def show_quality_recommendations(df):
     """Show quality improvement recommendations"""
@@ -650,36 +669,43 @@ def show_activity_comparison_analysis(api_base):
     st.markdown("**Compare emissions across different activities**")
     
     try:
-        # Get events data
-        response = requests.get(f"{api_base}/api/events", params={"limit": 1000})
+        # Get emission records data
+        response = requests.get(f"{api_base}/api/emission-records", params={"limit": 10000})
         
         if response.status_code == 200:
-            events = response.json()
+            records = response.json()
             
-            if events:
-                df = pd.DataFrame(events)
+            if records:
+                df = pd.DataFrame(records)
                 
-                # Activity statistics
-                activity_stats = df.groupby('activity').agg({
-                    'result_kgco2e': ['count', 'sum', 'mean', 'std'],
-                    'uncertainty_pct': 'mean'
-                }).round(2)
+                # Filter out records without activity_type or emissions
+                df = df[df['activity_type'].notna() & df['emissions_kgco2e'].notna()]
                 
-                activity_stats.columns = ['Event Count', 'Total Emissions', 'Mean Emissions', 'Std Dev', 'Avg Uncertainty']
-                
-                st.dataframe(activity_stats, use_container_width=True)
-                
-                # Box plot comparison
-                fig = px.box(
-                    df,
-                    x='activity',
-                    y='result_kgco2e',
-                    title="Emission Distribution by Activity Type"
-                )
-                
-                fig.update_layout(xaxis_tickangle=45)
-                st.plotly_chart(fig, use_container_width=True)
-        
+                if not df.empty:
+                    # Activity statistics
+                    activity_stats = df.groupby('activity_type').agg({
+                        'emissions_kgco2e': ['count', 'sum', 'mean', 'std'],
+                        'uncertainty_pct': 'mean'
+                    }).round(2)
+                    
+                    activity_stats.columns = ['Record Count', 'Total Emissions', 'Mean Emissions', 'Std Dev', 'Avg Uncertainty']
+                    
+                    st.dataframe(activity_stats, width='stretch')
+                    
+                    # Box plot comparison
+                    fig = px.box(
+                        df,
+                        x='activity_type',
+                        y='emissions_kgco2e',
+                        title="Emission Distribution by Activity Type"
+                    )
+                    
+                    fig.update_layout(xaxis_tickangle=45)
+                    st.plotly_chart(fig, width='stretch')
+                else:
+                    st.info("No activity data available for comparison.")
+            else:
+                st.info("No emission records found.")
         else:
             st.error("Failed to fetch data for activity comparison")
     

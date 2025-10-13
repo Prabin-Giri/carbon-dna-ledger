@@ -142,3 +142,20 @@ def calculate_merkle_root(row_hashes: List[str]) -> str:
     # In production, would implement proper Merkle tree
     concatenated = ''.join(sorted(row_hashes))
     return sha256_hash(concatenated)
+
+def calculate_record_base_string(row: Dict[str, Any]) -> str:
+    """Canonical base string for EmissionRecord hash chaining."""
+    fields = [
+        'date_start','date_end','org_unit','facility_id','activity_type','activity_amount',
+        'activity_unit','emission_factor_value','emission_factor_unit','ef_source','ef_ref_code',
+        'gwp_set','external_id'
+    ]
+    parts = []
+    for f in fields:
+        v = row.get(f)
+        parts.append("" if v is None else str(v))
+    return "|".join(parts)
+
+def calculate_record_hash(previous_hash: str, base_string: str, salt: str) -> str:
+    """Compute SHA256(previous_hash + '|' + base + '|' + salt)."""
+    return sha256_hash(f"{previous_hash or ''}|{base_string}|{salt}")
