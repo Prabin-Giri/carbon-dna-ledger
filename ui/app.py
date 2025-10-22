@@ -34,15 +34,20 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# API base URL - Force correct port
-API_BASE = os.getenv("API_BASE", "http://127.0.0.1:8000")
-# Ensure we're using port 8000, not 8001
-if ":8001" in API_BASE:
-    API_BASE = API_BASE.replace(":8001", ":8000")
-    print(f"Fixed API_BASE to: {API_BASE}")
+# API base URL - Use Streamlit secrets on cloud, env variable locally
+# For Streamlit Cloud deployment, this will be set in the secrets
+try:
+    # Try Streamlit secrets first (for Streamlit Cloud)
+    API_BASE = st.secrets.get("API_BASE", "http://127.0.0.1:8000")
+except:
+    # Fall back to environment variable (for local dev)
+    API_BASE = os.getenv("API_BASE", "http://127.0.0.1:8000")
 
-# Force the correct port regardless of environment
-API_BASE = "http://127.0.0.1:8000"
+# For Streamlit Cloud: You MUST deploy backend separately and set API_BASE in secrets
+# Options:
+# 1. Deploy backend to Render and set API_BASE to your Render URL
+# 2. Deploy backend to Railway and set API_BASE to your Railway URL
+# 3. For local development, use http://127.0.0.1:8000
 
 # Debug: Show API base URL
 if st.sidebar.checkbox("🔧 Debug Mode"):
