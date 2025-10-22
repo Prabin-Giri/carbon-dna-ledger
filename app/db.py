@@ -1,8 +1,14 @@
 """
 Database configuration and session management
 """
-from dotenv import load_dotenv
-load_dotenv()
+# Load environment variables (optional for local dev)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # Running on cloud platform or dotenv not available
+    pass
+
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base

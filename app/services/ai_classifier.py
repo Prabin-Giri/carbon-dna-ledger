@@ -10,11 +10,17 @@ from typing import Dict, Any, Optional, List
 from datetime import date
 import requests
 import os
-from dotenv import load_dotenv
+
+# Load environment variables (optional for local dev)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # Running on cloud platform or dotenv not available
+    pass
+
 from PIL import Image
 import pytesseract
-
-load_dotenv()
 
 class AIClassifier:
     def __init__(self, model_preference: str = None):

@@ -1,8 +1,14 @@
 """
 Upload component for CSV and PDF ingestion
 """
-from dotenv import load_dotenv
-load_dotenv()
+# Load environment variables (optional for local dev, not needed on Streamlit Cloud)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # Running on Streamlit Cloud or dotenv not available
+    pass
+
 import streamlit as st
 import requests
 import json

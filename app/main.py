@@ -2,8 +2,13 @@
 Carbon DNA Ledger - FastAPI Backend
 Main application entry point with all REST endpoints
 """
-from dotenv import load_dotenv
-load_dotenv()
+# Load environment variables (optional for local dev)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # Running on cloud platform or dotenv not available
+    pass
 
 # Suppress Plotly deprecation warnings
 import warnings
