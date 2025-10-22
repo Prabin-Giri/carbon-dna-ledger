@@ -20,13 +20,28 @@
    ```
 3. Click "**Advanced settings**"
 
-### **Step 4: Add Your Database Connection** (2 minutes)
+### **Step 4: Add Your Secrets** (2 minutes)
 Paste this in the "Secrets" section:
 ```toml
+# Database Connection (REQUIRED)
 DATABASE_URL = "postgresql://postgres:Nischita%409@db.mfegdhndowdtphrqazrl.supabase.co:5432/postgres"
+
+# Climate TRACE Integration (REQUIRED)
 COMPLIANCE_CT_ENABLED = "true"
+
+# API Base URL (REQUIRED for backend connection)
 API_BASE = "http://127.0.0.1:8000"
+
+# OpenAI API Key (REQUIRED for AI features)
+OPENAI_API_KEY = "sk-your-openai-api-key-here"
 ```
+
+**⚠️ Important:** Replace `sk-your-openai-api-key-here` with your actual OpenAI API key!
+
+**Don't have an OpenAI API key?**
+- Get one at: https://platform.openai.com/api-keys
+- Free tier includes $5 credit
+- Or the app will work with reduced AI features
 
 ### **Step 5: Deploy!** (1 minute)
 - Click "**Deploy!**" button
@@ -69,9 +84,11 @@ If you want both FastAPI backend AND Streamlit frontend hosted:
 2. Sign in with GitHub
 3. Click "**New +**" → "**Blueprint**"
 4. Select repository: `Prabin-Giri/carbon-dna-ledger`
-5. Add environment variable:
+5. Add environment variables:
    ```
    DATABASE_URL=postgresql://postgres:Nischita%409@db.mfegdhndowdtphrqazrl.supabase.co:5432/postgres
+   COMPLIANCE_CT_ENABLED=true
+   OPENAI_API_KEY=sk-your-openai-api-key-here
    ```
 6. Click "**Apply**"
 7. Wait 5-10 minutes

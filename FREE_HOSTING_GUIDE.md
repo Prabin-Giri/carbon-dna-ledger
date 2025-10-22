@@ -33,7 +33,10 @@ Your code is already on GitHub ✅
 DATABASE_URL = "postgresql://postgres:Nischita%409@db.mfegdhndowdtphrqazrl.supabase.co:5432/postgres"
 API_BASE = "http://127.0.0.1:8000"
 COMPLIANCE_CT_ENABLED = "true"
+OPENAI_API_KEY = "sk-your-openai-api-key-here"
 ```
+
+**Note:** Replace with your actual OpenAI API key from https://platform.openai.com/api-keys
 
 #### 5. Deploy!
 - Click "Deploy"
@@ -78,8 +81,10 @@ For both services (API and UI):
 ```
 DATABASE_URL=postgresql://postgres:Nischita%409@db.mfegdhndowdtphrqazrl.supabase.co:5432/postgres
 COMPLIANCE_CT_ENABLED=true
-OPENAI_API_KEY=your_key_here (optional)
+OPENAI_API_KEY=sk-your-openai-api-key-here
 ```
+
+**Note:** Get your OpenAI API key at https://platform.openai.com/api-keys (free tier available)
 
 #### 4. Deploy!
 - Wait 5-10 minutes for build
@@ -249,8 +254,14 @@ streamlit run ui/app.py --server.port $PORT --server.address 0.0.0.0
 ```
 DATABASE_URL=postgresql://postgres:PASSWORD@db.PROJECT.supabase.co:5432/postgres
 COMPLIANCE_CT_ENABLED=true
+OPENAI_API_KEY=sk-your-openai-api-key-here
 API_BASE=https://your-api-url.onrender.com
 ```
+
+**Where to Get:**
+- **DATABASE_URL**: From your Supabase project settings
+- **OPENAI_API_KEY**: From https://platform.openai.com/api-keys
+- **API_BASE**: Your deployed backend URL (for Render/Railway deployments)
 
 ---
 
