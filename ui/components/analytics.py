@@ -128,6 +128,73 @@ def show_overview_metrics(df):
             delta=f"{(quality_issues/total_records)*100:.1f}%" if total_records > 0 else "0%",
             help="Records with quality score < 50"
         )
+    
+    # Calculation Breakdown
+    st.markdown("### 🧮 Metrics Calculation Breakdown")
+    
+    with st.expander("📊 **Total Emissions Calculation**", expanded=True):
+        st.markdown("**Formula:** `Σ(emissions_kgco2e)` for all records in period")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Total Records", f"{total_records:,}")
+            st.metric("Sum of Emissions", f"{total_emissions:,.0f} kg CO₂e")
+            st.metric("Average per Record", f"{avg_emissions:,.0f} kg CO₂e")
+        
+        with col2:
+            st.metric("Tonnes CO₂e", f"{total_emissions/1000:,.1f}")
+            st.metric("Million Tonnes", f"{total_emissions/1000000:.3f}")
+            st.metric("Carbon Footprint", f"{total_emissions/1000:.1f} tonnes", help="Total carbon footprint")
+        
+        with col3:
+            st.metric("Daily Average", f"{total_emissions/30:,.0f} kg CO₂e", help="Assuming 30-day period")
+            st.metric("Hourly Average", f"{total_emissions/(30*24):,.0f} kg CO₂e", help="Per hour average")
+            st.metric("Per Second", f"{total_emissions/(30*24*3600):.2f} kg CO₂e", help="Per second average")
+    
+    with st.expander("📈 **Data Quality Analysis**", expanded=False):
+        st.markdown("**Formula:** `AVG(data_quality_score)` and `COUNT(*) WHERE data_quality_score < 50`")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Average Quality", f"{avg_quality:.1f}/100")
+            st.metric("Quality Grade", "Excellent" if avg_quality >= 90 else "Good" if avg_quality >= 70 else "Fair" if avg_quality >= 50 else "Poor")
+            st.metric("Quality Trend", "Improving" if avg_quality >= 75 else "Stable" if avg_quality >= 50 else "Declining")
+        
+        with col2:
+            st.metric("Low Quality Records", f"{quality_issues:,}")
+            st.metric("Low Quality %", f"{(quality_issues/total_records)*100:.1f}%" if total_records > 0 else "0%")
+            st.metric("High Quality Records", f"{total_records - quality_issues:,}")
+        
+        with col3:
+            st.metric("Quality Range", f"{df['data_quality_score'].min():.1f} - {df['data_quality_score'].max():.1f}" if 'data_quality_score' in df.columns else "N/A")
+            st.metric("Quality Std Dev", f"{df['data_quality_score'].std():.1f}" if 'data_quality_score' in df.columns else "N/A")
+            st.metric("Quality Consistency", "High" if df['data_quality_score'].std() < 10 else "Medium" if df['data_quality_score'].std() < 20 else "Low" if 'data_quality_score' in df.columns else "N/A")
+    
+    with st.expander("📊 **Record Distribution Analysis**", expanded=False):
+        st.markdown("**Formula:** `COUNT(*) GROUP BY various dimensions`")
+        
+        # Scope distribution
+        scope_dist = df['scope'].value_counts() if 'scope' in df.columns else {}
+        activity_dist = df['activity_type'].value_counts().head(5) if 'activity_type' in df.columns else {}
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Total Records", f"{total_records:,}")
+            st.metric("Unique Suppliers", f"{df['supplier_name'].nunique() if 'supplier_name' in df.columns else 0:,}")
+            st.metric("Unique Activities", f"{df['activity_type'].nunique() if 'activity_type' in df.columns else 0:,}")
+        
+        with col2:
+            st.metric("Scope 1 Records", f"{scope_dist.get('1', 0):,}")
+            st.metric("Scope 2 Records", f"{scope_dist.get('2', 0):,}")
+            st.metric("Scope 3 Records", f"{scope_dist.get('3', 0):,}")
+        
+        with col3:
+            st.metric("Top Activity", activity_dist.index[0] if len(activity_dist) > 0 else "N/A")
+            st.metric("Top Activity Count", f"{activity_dist.iloc[0]:,}" if len(activity_dist) > 0 else "N/A")
+            st.metric("Activity Diversity", f"{df['activity_type'].nunique() if 'activity_type' in df.columns else 0} types")
 
 def show_overview_charts(df):
     """Show overview visualization charts"""

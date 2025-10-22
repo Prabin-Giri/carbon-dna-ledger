@@ -22,9 +22,9 @@ import time
 
 
 def show_climate_trace_page(api_base: str):
-    """Main Data Integrity & Compliance Center page"""
-    st.title("🔍 Data Integrity & Compliance Center")
-    st.markdown("Comprehensive data analysis, tampering detection, compliance scoring, and carbon intelligence for your emissions data")
+    """Main Climate TRACE page"""
+    st.title("🌍 Climate TRACE Compliance Analysis")
+    st.markdown("Compare your emissions data against Climate TRACE methodology benchmarks for compliance and benchmarking")
     
     # Check if Climate TRACE is enabled
     try:
@@ -42,10 +42,10 @@ def show_climate_trace_page(api_base: str):
         return
     
     # Show methodology-based approach info
-    st.info("📊 **Advanced Data Intelligence**: This center provides comprehensive analysis including data integrity checks, compliance scoring, tampering detection, and benchmarking against industry standards.")
+    st.info("📊 **Methodology-Based Analysis**: This tool uses Climate TRACE emission factors and sector benchmarks to compare your reported emissions against industry standards.")
     
     # Create tabs
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["📊 Compliance Analysis", "🗺️ Sector Intelligence", "📈 Benchmark Comparison", "🔍 Real-time Monitoring", "🎯 Factor Breakdown", "🛡️ Data Tampering", "⚙️ Settings"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Cross-Check Analysis", "🗺️ Sector Mapping", "📈 Benchmark Comparison", "🔍 Real-time Analysis", "🎯 Factor Breakdown", "⚙️ Settings"])
     
     with tab1:
         show_crosscheck_analysis(api_base)
@@ -63,16 +63,13 @@ def show_climate_trace_page(api_base: str):
         show_factor_breakdown(api_base)
     
     with tab6:
-        show_data_tampering_analysis(api_base)
-    
-    with tab7:
         show_climate_trace_settings(api_base)
 
 
 def show_crosscheck_analysis(api_base: str):
-    """Show compliance analysis between business data and industry benchmarks"""
-    st.header("📊 Compliance Analysis")
-    st.markdown("Compare your reported emissions against industry methodology benchmarks for compliance verification")
+    """Show cross-check analysis between business data and Climate TRACE benchmarks"""
+    st.header("📊 Cross-Check Analysis")
+    st.markdown("Compare your reported emissions against Climate TRACE methodology benchmarks")
     
     # Date selection
     col1, col2 = st.columns(2)
@@ -235,14 +232,16 @@ def show_recent_crosscheck_results(api_base: str):
                 # Create DataFrame
                 df = pd.DataFrame(results)
                 
-                # Show all cross-check results
-                if not df.empty:
+                # Show only results with Climate TRACE benchmarks
+                ct_results = df[df['ct_emissions_kgco2e'] > 0]
+                
+                if not ct_results.empty:
                     st.dataframe(
-                        df[['sector', 'our_emissions_kgco2e', 'ct_emissions_kgco2e', 'compliance_status', 'delta_percentage']].head(5),
+                        ct_results[['sector', 'our_emissions_kgco2e', 'ct_emissions_kgco2e', 'compliance_status']].head(5),
                         use_container_width=True
                     )
                 else:
-                    st.info("No recent cross-check results found")
+                    st.info("No recent cross-check results with Climate TRACE benchmarks found")
             else:
                 st.info("No cross-check results found")
         else:
@@ -252,9 +251,9 @@ def show_recent_crosscheck_results(api_base: str):
 
 
 def show_sector_mapping(api_base: str):
-    """Show sector intelligence and mapping interface"""
-    st.header("🗺️ Sector Intelligence")
-    st.markdown("Map your activity types to industry sectors for accurate compliance analysis")
+    """Show sector mapping interface"""
+    st.header("🗺️ Sector Mapping")
+    st.markdown("Map your activity types to Climate TRACE sectors for accurate comparison")
     
     # Map records button
     if st.button("🔄 Map All Records to Climate TRACE Sectors", type="primary"):
@@ -364,357 +363,44 @@ def show_example_benchmark(sector: str):
         st.info("💡 **Note**: These benchmarks are based on Climate TRACE methodology and typical industry activity levels. Your actual emissions may vary based on your specific operations and efficiency measures.")
 
 
-def show_data_tampering_analysis(api_base: str):
-    """Show data tampering detection and analysis"""
-    st.header("🛡️ Data Tampering Detection")
-    st.markdown("Advanced security analysis to detect data tampering, manipulation, and integrity issues in your emission records")
-    
-    # Get all emission records for tampering analysis using pagination
-    try:
-        all_records = []
-        offset = 0
-        limit = 1000  # Fetch in batches of 1000
-        total_fetched = 0
-        
-        with st.spinner("Fetching all emission records for tampering analysis..."):
-            while True:
-                response = requests.get(f"{api_base}/api/emission-records?offset={offset}&limit={limit}", timeout=30)
-                if response.status_code == 200:
-                    batch_records = response.json()
-                    if not batch_records:
-                        break
-                    all_records.extend(batch_records)
-                    total_fetched += len(batch_records)
-                    offset += limit
-                    
-                    # Update progress
-                    st.write(f"Fetched {total_fetched} records...")
-                    
-                    # Safety break to prevent infinite loops
-                    if len(batch_records) < limit:
-                        break
-                else:
-                    st.error(f"Failed to fetch records at offset {offset}")
-                    break
-        
-        if all_records:
-            st.success(f"✅ Successfully fetched {len(all_records)} records from your Supabase database")
-            
-            # Analyze all records for tampering
-            tampering_results = analyze_data_tampering(all_records)
-                
-            # Summary metrics
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Total Records", len(all_records))
-            with col2:
-                tampered_count = sum(1 for r in tampering_results if r['tampering_detected'])
-                st.metric("Tampered Records", tampered_count, delta=f"{(tampered_count/len(all_records)*100):.1f}%")
-            with col3:
-                suspicious_count = sum(1 for r in tampering_results if r['suspicious_activity'])
-                st.metric("Suspicious Records", suspicious_count)
-            with col4:
-                clean_count = len(all_records) - tampered_count - suspicious_count
-                st.metric("Clean Records", clean_count)
-            
-            # Show tampered records
-            if tampered_count > 0:
-                st.subheader("🚨 Records with Detected Tampering")
-                tampered_records = [r for r in tampering_results if r['tampering_detected']]
-                
-                for record in tampered_records:
-                    with st.expander(f"🔴 {record['supplier_name']} - {record['date']} (Risk: {record['risk_level']})"):
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.write(f"**Record ID:** {record['id']}")
-                            st.write(f"**Activity:** {record['activity_type']}")
-                            st.write(f"**Emissions:** {record['emissions_kgco2e']} kg CO2e")
-                            st.write(f"**Methodology:** {record['methodology']}")
-                        with col2:
-                            st.write(f"**Tampering Score:** {record['tampering_score']}/100")
-                            st.write(f"**Data Quality:** {record['data_quality_score']}")
-                            st.write(f"**Created:** {record['created_at']}")
-                        
-                        st.write("**Tampering Indicators:**")
-                        for indicator in record['tampering_indicators']:
-                            st.warning(f"• {indicator}")
-            
-            # Show suspicious records
-            if suspicious_count > 0:
-                st.subheader("⚠️ Suspicious Records (Requires Review)")
-                suspicious_records = [r for r in tampering_results if r['suspicious_activity'] and not r['tampering_detected']]
-                
-                for record in suspicious_records:
-                    with st.expander(f"🟡 {record['supplier_name']} - {record['date']} (Suspicious)"):
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.write(f"**Record ID:** {record['id']}")
-                            st.write(f"**Activity:** {record['activity_type']}")
-                            st.write(f"**Emissions:** {record['emissions_kgco2e']} kg CO2e")
-                        with col2:
-                            st.write(f"**Suspicion Score:** {record['suspicion_score']}/100")
-                            st.write(f"**Data Quality:** {record['data_quality_score']}")
-                        
-                        st.write("**Suspicious Indicators:**")
-                        for indicator in record['suspicious_indicators']:
-                            st.info(f"• {indicator}")
-            
-            # Show clean records summary
-            clean_records = [r for r in tampering_results if not r['tampering_detected'] and not r['suspicious_activity']]
-            if clean_records:
-                st.subheader("✅ Clean Records")
-                st.success(f"Found {len(clean_records)} records with no signs of tampering")
-            
-            # Tampering analysis chart
-            st.subheader("📊 Tampering Analysis Overview")
-            
-            # Create tampering status distribution
-            tampering_status = {
-                'Clean': len([r for r in tampering_results if not r['tampering_detected'] and not r['suspicious_activity']]),
-                'Suspicious': len([r for r in tampering_results if r['suspicious_activity'] and not r['tampering_detected']]),
-                'Tampered': len([r for r in tampering_results if r['tampering_detected']])
-            }
-            
-            fig = px.pie(
-                values=list(tampering_status.values()),
-                names=list(tampering_status.keys()),
-                title="Data Tampering Status Distribution",
-                color_discrete_map={
-                    'Clean': '#28a745',
-                    'Suspicious': '#ffc107',
-                    'Tampered': '#dc3545'
-                }
-            )
-            st.plotly_chart(fig, use_container_width=True)
-            
-            # Export tampering report
-            if st.button("📥 Export Tampering Report", type="primary"):
-                export_tampering_report(tampering_results)
-        else:
-            st.warning("No emission records found for tampering analysis")
-    except Exception as e:
-        st.error(f"❌ Error in tampering analysis: {e}")
-
-
-def analyze_data_tampering(records):
-    """Analyze records for signs of data tampering"""
-    tampering_results = []
-    
-    for record in records:
-        result = {
-            'id': record.get('id'),
-            'supplier_name': record.get('supplier_name'),
-            'date': record.get('date'),
-            'activity_type': record.get('activity_type'),
-            'emissions_kgco2e': record.get('emissions_kgco2e'),
-            'methodology': record.get('methodology'),
-            'data_quality_score': record.get('data_quality_score'),
-            'created_at': record.get('created_at'),
-            'tampering_detected': False,
-            'suspicious_activity': False,
-            'tampering_score': 0,
-            'suspicion_score': 0,
-            'risk_level': 'Low',
-            'tampering_indicators': [],
-            'suspicious_indicators': []
-        }
-        
-        # Check for tampering indicators
-        tampering_score = 0
-        suspicion_score = 0
-        
-        # 1. Data Quality Anomalies (High Risk)
-        data_quality = record.get('data_quality_score', 0)
-        if data_quality == 0:
-            # Only flag as suspicious if there are other issues too
-            suspicion_score += 5
-            result['suspicious_indicators'].append("Zero data quality score - may need review")
-        elif data_quality < 20:
-            suspicion_score += 10
-            result['suspicious_indicators'].append("Very low data quality score - requires review")
-        elif data_quality < 50:
-            suspicion_score += 5
-            result['suspicious_indicators'].append("Low data quality score - consider improving")
-        
-        # 2. Methodology Inconsistencies (Medium Risk)
-        methodology = record.get('methodology', '')
-        if not methodology or methodology == 'Unknown':
-            tampering_score += 25
-            result['tampering_indicators'].append("Missing or unknown methodology - data integrity concern")
-        elif 'AI Classification' in methodology and data_quality == 0:
-            tampering_score += 20
-            result['tampering_indicators'].append("AI classified with zero quality score - possible manipulation")
-        
-        # 3. Activity Data Anomalies (Medium Risk)
-        activity_amount = record.get('activity_amount', 0)
-        activity_unit = record.get('activity_unit', '')
-        if activity_amount == 0 and activity_unit == '':
-            tampering_score += 15
-            result['tampering_indicators'].append("Missing activity data - incomplete record")
-        elif activity_amount == 0 and activity_unit:
-            suspicion_score += 10
-            result['suspicious_indicators'].append("Zero activity amount with unit - data inconsistency")
-        
-        # 4. Emissions Anomalies (High Risk)
-        emissions = record.get('emissions_kgco2e', 0)
-        if emissions <= 0:
-            tampering_score += 35
-            result['tampering_indicators'].append("Zero or negative emissions - impossible value")
-        elif emissions > 100000:  # Very high emissions
-            suspicion_score += 20
-            result['suspicious_indicators'].append("Unusually high emissions - requires verification")
-        
-        # 5. Date Anomalies (Low Risk)
-        date_str = record.get('date', '')
-        if not date_str or date_str == '0000-00-00':
-            tampering_score += 10
-            result['tampering_indicators'].append("Invalid or missing date - data integrity issue")
-        
-        # 6. Supplier Anomalies (Low Risk)
-        supplier = record.get('supplier_name', '')
-        if not supplier or supplier.strip() == '':
-            tampering_score += 10
-            result['tampering_indicators'].append("Missing supplier information - incomplete data")
-        
-        # 7. Scope Anomalies (Medium Risk)
-        scope = record.get('scope', 0)
-        if scope not in [1, 2, 3]:
-            tampering_score += 15
-            result['tampering_indicators'].append("Invalid scope value - data integrity concern")
-        
-        # 8. ID Anomalies (High Risk)
-        record_id = record.get('id', '')
-        if not record_id or len(record_id) < 10:
-            tampering_score += 25
-            result['tampering_indicators'].append("Invalid or suspicious record ID")
-        
-        # Determine tampering status
-        result['tampering_score'] = min(100, tampering_score)
-        result['suspicion_score'] = min(100, suspicion_score)
-        
-        if tampering_score >= 40:
-            result['tampering_detected'] = True
-            result['risk_level'] = 'High'
-        elif tampering_score >= 20 or suspicion_score >= 30:
-            result['suspicious_activity'] = True
-            result['risk_level'] = 'Medium'
-        else:
-            result['risk_level'] = 'Low'
-        
-        tampering_results.append(result)
-    
-    return tampering_results
-
-
-def export_tampering_report(tampering_results):
-    """Export tampering analysis report"""
-    import pandas as pd
-    from datetime import datetime
-    
-    # Create DataFrame
-    df = pd.DataFrame(tampering_results)
-    
-    # Select relevant columns
-    export_df = df[['supplier_name', 'date', 'activity_type', 'emissions_kgco2e', 
-                   'methodology', 'data_quality_score', 'tampering_detected', 
-                   'suspicious_activity', 'tampering_score', 'suspicion_score', 
-                   'risk_level']].copy()
-    
-    # Rename columns for better readability
-    export_df.columns = ['Supplier', 'Date', 'Activity Type', 'Emissions (kg CO2e)', 
-                        'Methodology', 'Data Quality Score', 'Tampering Detected', 
-                        'Suspicious Activity', 'Tampering Score', 'Suspicion Score', 
-                        'Risk Level']
-    
-    # Convert to CSV
-    csv = export_df.to_csv(index=False)
-    
-    # Create download button
-    st.download_button(
-        label="📥 Download Tampering Report (CSV)",
-        data=csv,
-        file_name=f"data_tampering_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-        mime="text/csv"
-    )
-
-
 def show_factor_breakdown(api_base: str):
     """Show detailed factor breakdown with live scores and impact percentages"""
     st.header("🔍 Factor Breakdown & Live Scoring")
-    st.markdown("Analyze which factors contribute to your compliance score and their real-time impact across your entire dataset")
+    st.markdown("Analyze which factors contribute to your compliance score and their real-time impact")
     
-    # Get all emission records for comprehensive analysis
+    # Get sample emission record for analysis
     try:
-        response = requests.get(f"{api_base}/api/emission-records?limit=1000", timeout=15)
+        response = requests.get(f"{api_base}/api/emission-records?limit=1", timeout=10)
         if response.status_code == 200:
             records = response.json()
             if records:
-                st.info(f"📊 Analyzing {len(records)} emission records for comprehensive factor breakdown")
+                record = records[0]
                 
-                # Calculate compliance scores for all records
-                current_scores = []
-                climate_trace_scores = []
+                # Calculate compliance score breakdown for current methodology
+                current_breakdown = calculate_compliance_breakdown(record)
                 
-                with st.spinner("Calculating compliance scores for all records..."):
-                    for record in records:
-                        # Current methodology
-                        current_breakdown = calculate_compliance_breakdown(record)
-                        current_scores.append(current_breakdown['overall_score'])
-                        
-                        # Climate TRACE methodology
-                        climate_trace_record = record.copy()
-                        climate_trace_record['methodology'] = 'Climate TRACE'
-                        climate_trace_breakdown = calculate_compliance_breakdown(climate_trace_record)
-                        climate_trace_scores.append(climate_trace_breakdown['overall_score'])
+                # Calculate compliance score breakdown for Climate TRACE
+                climate_trace_record = record.copy()
+                climate_trace_record['methodology'] = 'Climate TRACE'
+                climate_trace_breakdown = calculate_compliance_breakdown(climate_trace_record)
                 
-                # Calculate aggregate statistics
-                current_avg = sum(current_scores) / len(current_scores)
-                climate_trace_avg = sum(climate_trace_scores) / len(climate_trace_scores)
-                improvement = climate_trace_avg - current_avg
-                
-                # Calculate factor breakdowns for aggregate analysis
-                current_factors = {
-                    'factor_source_quality': sum([calculate_compliance_breakdown(r)['factor_source_quality'] for r in records]) / len(records),
-                    'metadata_completeness': sum([calculate_compliance_breakdown(r)['metadata_completeness'] for r in records]) / len(records),
-                    'data_entry_method_score': sum([calculate_compliance_breakdown(r)['data_entry_method_score'] for r in records]) / len(records),
-                    'fingerprint_integrity': sum([calculate_compliance_breakdown(r)['fingerprint_integrity'] for r in records]) / len(records),
-                    'llm_confidence': sum([calculate_compliance_breakdown(r)['llm_confidence'] for r in records]) / len(records),
-                    'overall_score': current_avg
-                }
-                
-                climate_trace_factors = {
-                    'factor_source_quality': sum([calculate_compliance_breakdown({**r, 'methodology': 'Climate TRACE'})['factor_source_quality'] for r in records]) / len(records),
-                    'metadata_completeness': sum([calculate_compliance_breakdown({**r, 'methodology': 'Climate TRACE'})['metadata_completeness'] for r in records]) / len(records),
-                    'data_entry_method_score': sum([calculate_compliance_breakdown({**r, 'methodology': 'Climate TRACE'})['data_entry_method_score'] for r in records]) / len(records),
-                    'fingerprint_integrity': sum([calculate_compliance_breakdown({**r, 'methodology': 'Climate TRACE'})['fingerprint_integrity'] for r in records]) / len(records),
-                    'llm_confidence': sum([calculate_compliance_breakdown({**r, 'methodology': 'Climate TRACE'})['llm_confidence'] for r in records]) / len(records),
-                    'overall_score': climate_trace_avg
-                }
-                
-                # Display comprehensive analysis
-                st.subheader("📊 Comprehensive Dataset Analysis")
-                col1, col2, col3 = st.columns(3)
+                # Display side-by-side comparison
+                st.subheader("📊 Side-by-Side Comparison")
+                col1, col2 = st.columns(2)
                 
                 with col1:
                     st.markdown("**🔴 Current Methodology**")
-                    st.metric("Average Score", f"{current_avg:.1f}/100")
-                    st.metric("Score Range", f"{min(current_scores):.1f} - {max(current_scores):.1f}")
-                    st.metric("Records Analyzed", f"{len(records):,}")
+                    st.metric("Overall Score", f"{current_breakdown['overall_score']:.1f}/100")
+                    st.metric("Risk Level", current_breakdown['risk_level'])
+                    st.metric("Audit Ready", "✅ Yes" if current_breakdown['audit_ready'] else "❌ No")
                 
                 with col2:
+                    improvement = climate_trace_breakdown['overall_score'] - current_breakdown['overall_score']
                     st.markdown("**🟢 With Climate TRACE**")
-                    st.metric("Average Score", f"{climate_trace_avg:.1f}/100", 
+                    st.metric("Overall Score", f"{climate_trace_breakdown['overall_score']:.1f}/100", 
                              delta=f"+{improvement:.1f}")
-                    st.metric("Score Range", f"{min(climate_trace_scores):.1f} - {max(climate_trace_scores):.1f}")
-                    st.metric("Improvement %", f"{(improvement/current_avg*100):.1f}%")
-                
-                with col3:
-                    st.markdown("**📈 Impact Analysis**")
-                    high_quality_current = len([s for s in current_scores if s >= 80])
-                    high_quality_trace = len([s for s in climate_trace_scores if s >= 80])
-                    st.metric("High Quality Records", f"{high_quality_trace:,}", delta=f"+{high_quality_trace - high_quality_current}")
-                    st.metric("Audit Ready Records", f"{len([s for s in climate_trace_scores if s >= 70]):,}")
-                    st.metric("Compliance Rate", f"{(len([s for s in climate_trace_scores if s >= 70])/len(records)*100):.1f}%")
+                    st.metric("Risk Level", climate_trace_breakdown['risk_level'])
+                    st.metric("Audit Ready", "✅ Yes" if climate_trace_breakdown['audit_ready'] else "❌ No")
                 
                 # Show improvement summary
                 st.subheader("📈 Improvement Summary")
@@ -728,67 +414,6 @@ def show_factor_breakdown(api_base: str):
                 with col3:
                     audit_improvement = "Yes" if not current_breakdown['audit_ready'] and climate_trace_breakdown['audit_ready'] else "No Change"
                     st.metric("Audit Ready", audit_improvement)
-                
-                # Calculation Breakdown
-                st.markdown("### 🧮 Factor Calculation Breakdown")
-                
-                with st.expander("📊 **Current Methodology Score Calculation**", expanded=True):
-                    st.markdown("**Formula:** `AVG((Factor Source Quality × 0.25) + (Metadata Completeness × 0.25) + (Data Entry Method × 0.20) + (Fingerprint Integrity × 0.15) + (LLM Confidence × 0.15))` across all records")
-                    
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        st.metric("Factor Source Quality", f"{current_factors['factor_source_quality']:.1f}/25", help="Average current methodology quality")
-                        st.metric("Metadata Completeness", f"{current_factors['metadata_completeness']:.1f}/25", help="Average data completeness score")
-                    
-                    with col2:
-                        st.metric("Data Entry Method", f"{current_factors['data_entry_method_score']:.1f}/20", help="Average entry method quality")
-                        st.metric("Fingerprint Integrity", f"{current_factors['fingerprint_integrity']:.1f}/15", help="Average data integrity score")
-                    
-                    with col3:
-                        st.metric("LLM Confidence", f"{current_factors['llm_confidence']:.1f}/15", help="Average AI confidence score")
-                        st.metric("**Average Score**", f"{current_factors['overall_score']:.1f}/100", help="Weighted average across all records")
-                
-                with st.expander("🟢 **Climate TRACE Score Calculation**", expanded=False):
-                    st.markdown("**Formula:** `AVG((Climate TRACE Factor Quality × 0.25) + (Enhanced Metadata × 0.25) + (Advanced Entry × 0.20) + (Blockchain Integrity × 0.15) + (AI Confidence × 0.15))` across all records")
-                    
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        st.metric("Climate TRACE Factor", f"{climate_trace_factors['factor_source_quality']:.1f}/25", help="Average Climate TRACE methodology quality")
-                        st.metric("Enhanced Metadata", f"{climate_trace_factors['metadata_completeness']:.1f}/25", help="Average enhanced data completeness")
-                    
-                    with col2:
-                        st.metric("Advanced Entry", f"{climate_trace_factors['data_entry_method_score']:.1f}/20", help="Average advanced entry method")
-                        st.metric("Blockchain Integrity", f"{climate_trace_factors['fingerprint_integrity']:.1f}/15", help="Average blockchain-based integrity")
-                    
-                    with col3:
-                        st.metric("AI Confidence", f"{climate_trace_factors['llm_confidence']:.1f}/15", help="Average enhanced AI confidence")
-                        st.metric("**Average Score**", f"{climate_trace_factors['overall_score']:.1f}/100", help="Climate TRACE average across all records")
-                
-                with st.expander("📈 **Improvement Calculation**", expanded=False):
-                    st.markdown("**Formula:** `AVG(Climate TRACE Scores) - AVG(Current Scores)` and `(Improvement / Current Average) × 100`")
-                    
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        st.metric("Average Score Difference", f"+{improvement:.1f} points")
-                        st.metric("Percentage Improvement", f"{(improvement/current_avg*100):.1f}%")
-                        st.metric("Improvement Grade", "Excellent" if improvement > 20 else "Good" if improvement > 10 else "Moderate" if improvement > 0 else "None")
-                    
-                    with col2:
-                        factor_improvement = climate_trace_factors['factor_source_quality'] - current_factors['factor_source_quality']
-                        metadata_improvement = climate_trace_factors['metadata_completeness'] - current_factors['metadata_completeness']
-                        st.metric("Factor Quality Gain", f"+{factor_improvement:.1f} points")
-                        st.metric("Metadata Gain", f"+{metadata_improvement:.1f} points")
-                        st.metric("Methodology Upgrade", "Climate TRACE" if factor_improvement > 0 else "Current")
-                    
-                    with col3:
-                        integrity_improvement = climate_trace_factors['fingerprint_integrity'] - current_factors['fingerprint_integrity']
-                        llm_improvement = climate_trace_factors['llm_confidence'] - current_factors['llm_confidence']
-                        st.metric("Integrity Gain", f"+{integrity_improvement:.1f} points")
-                        st.metric("AI Confidence Gain", f"+{llm_improvement:.1f} points")
-                        st.metric("Overall Upgrade", "Significant" if improvement > 15 else "Moderate" if improvement > 5 else "Minimal")
                 
                 # Factor breakdown
                 st.subheader("🎯 Factor Impact Analysis")
@@ -867,46 +492,20 @@ def calculate_compliance_breakdown(record):
     else:
         factor_scores['data_entry_method_score'] = 85.0
     
-    # Fingerprint integrity - assess data integrity based on available fields
-    # Since hash fields may not be present, we'll assess integrity based on data consistency
+    # Fingerprint integrity
+    record_hash = record.get('record_hash')
+    previous_hash = record.get('previous_hash')
+    salt = record.get('salt')
     
     fingerprint_score = 0.0
-    
-    # Check for data consistency indicators
-    has_id = bool(record.get('id'))
-    has_created_at = bool(record.get('created_at'))
-    has_data_quality_score = 'data_quality_score' in record and record.get('data_quality_score') is not None
-    has_activity_amount = 'activity_amount' in record and record.get('activity_amount') is not None
-    has_activity_unit = bool(record.get('activity_unit'))
-    
-    # Basic data integrity (40 points)
-    if has_id and has_created_at:
+    if record_hash:
         fingerprint_score += 40
-    
-    # Data quality indicators (30 points)
-    if has_data_quality_score:
-        data_quality = float(record.get('data_quality_score', 0))
-        if data_quality >= 0.8:
-            fingerprint_score += 30
-        elif data_quality >= 0.6:
-            fingerprint_score += 20
-        elif data_quality >= 0.4:
-            fingerprint_score += 10
-    
-    # Activity data completeness (20 points)
-    if has_activity_amount and has_activity_unit:
+    if previous_hash:
+        fingerprint_score += 30
+    if salt:
         fingerprint_score += 20
-    elif has_activity_amount or has_activity_unit:
+    if len(record_hash or '') == 64:
         fingerprint_score += 10
-    
-    # Methodology consistency (10 points)
-    methodology = record.get('methodology', '')
-    if methodology and methodology != 'Unknown':
-        fingerprint_score += 10
-    
-    # If no specific integrity measures, give baseline score for untampered data
-    if fingerprint_score == 0:
-        fingerprint_score = 60.0  # Baseline score for data without tampering
     
     factor_scores['fingerprint_integrity'] = min(100.0, fingerprint_score)
     
@@ -965,9 +564,9 @@ def calculate_compliance_breakdown(record):
 
 
 def show_realtime_analysis(api_base: str):
-    """Show real-time monitoring and analysis"""
-    st.header("🔍 Real-time Monitoring")
-    st.markdown("Monitor your emissions data in real-time with automated alerts, insights, and compliance tracking")
+    """Show real-time Climate TRACE analysis and monitoring"""
+    st.header("🔍 Real-time Analysis")
+    st.markdown("Monitor your emissions in real-time against Climate TRACE benchmarks")
     
     # Real-time monitoring dashboard
     col1, col2, col3 = st.columns(3)
@@ -1071,8 +670,8 @@ def show_realtime_analysis(api_base: str):
 
 
 def show_climate_trace_settings(api_base: str):
-    """Show Data Integrity Center settings and configuration"""
-    st.header("⚙️ Data Integrity Center Settings")
+    """Show Climate TRACE settings and configuration"""
+    st.header("⚙️ Climate TRACE Settings")
     
     # Service status
     st.subheader("🔧 Service Configuration")

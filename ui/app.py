@@ -19,7 +19,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import os
 
-from components import uploader, explorer, details, scenario, analytics, query, human_review, rewards, climate_trace, advanced_compliance_dashboard, enhanced_audit_snapshots, enhanced_compliance_roadmap
+from components import uploader, explorer, details, scenario, analytics, query, human_review, rewards, climate_trace, advanced_compliance_dashboard, enhanced_audit_snapshots, enhanced_compliance_roadmap, audit_details_page
 
 # Configure Streamlit page
 st.set_page_config(
@@ -42,6 +42,8 @@ API_BASE = "http://127.0.0.1:8000"
 # Debug: Show API base URL
 if st.sidebar.checkbox("🔧 Debug Mode"):
     st.sidebar.write(f"API Base URL: {API_BASE}")
+    
+    # Test API connectivity
     try:
         import socket
         host, port = API_BASE.replace("http://", "").split(":")
@@ -107,7 +109,7 @@ def main():
         "Choose a page:",
         ["📊 Dashboard", "📤 Upload Data", "🔍 Event Explorer", "🧬 Event Details",
          "🔄 What-If Scenarios", "📈 Analytics", "🔍 Human Review", "💰 Carbon Rewards",
-         "🌍 Climate TRACE", "🛡️ Compliance Intelligence", "🔍 Enhanced Audit Snapshots", "🗺️ Enhanced Compliance Roadmap", "❓ Ask Questions"]
+         "🔍 Data Integrity Center", "🛡️ Compliance Intelligence", "🔍 Enhanced Audit Snapshots", "🗺️ Enhanced Compliance Roadmap", "❓ Ask Questions"]
     )
     
     # API health check
@@ -150,7 +152,7 @@ def main():
         human_review.show_human_review_page()
     elif page == "💰 Carbon Rewards":
         rewards.show_rewards_page(API_BASE)
-    elif page == "🌍 Climate TRACE":
+    elif page == "🔍 Data Integrity Center":
         climate_trace.show_climate_trace_page(API_BASE)
     elif page == "🛡️ Compliance Intelligence":
         advanced_compliance_dashboard.show_advanced_compliance_dashboard(API_BASE)
@@ -160,6 +162,8 @@ def main():
         enhanced_compliance_roadmap.show_enhanced_compliance_roadmap(API_BASE)
     elif page == "❓ Ask Questions":
         query.show_query_page(API_BASE)
+    elif page == "audit_details":
+        audit_details_page.show_audit_details_page()
 
 def show_dashboard():
     """Show main dashboard with key metrics"""

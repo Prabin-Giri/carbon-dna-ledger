@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, func, extract, text, or_, and_
 
 from . import models, schemas
-from .db import get_db, engine
+from .db import get_db, engine, DATABASE_URL
 from .services import ingest, hashing, factors, scenario, analytics, rewards_engine
 from .services.climate_trace import climate_trace_service
 from .services.enhanced_climate_trace import enhanced_climate_trace_service
@@ -40,6 +40,7 @@ from .services.advanced_compliance_engine import AdvancedComplianceEngine
 from .services.compliance_report_generator import ComplianceReportGenerator
 from .services.intake_assistant import build_intake_assistant
 from .api_enhanced_audit import router as enhanced_audit_router
+from .services.audit_sync_service import AuditSyncService
 from .api_enhanced_roadmap import router as enhanced_roadmap_router
 import logging
 
@@ -106,7 +107,7 @@ def _run_safe_migrations() -> None:
                                 );
                                 ALTER TABLE emission_records ALTER COLUMN needs_human_review SET DEFAULT false;
                             EXCEPTION WHEN others THEN
-                                -- Ignore if already boolean or on SQLite
+                                -- Ignore if already boolean
                                 NULL;
                             END;
                         END IF;
@@ -116,7 +117,7 @@ def _run_safe_migrations() -> None:
                 )
             except Exception:
                 pass
-            # Add Compliance Integrity Engine fields to emission_records (Postgres/SQLite compatible)
+            # Add Compliance Integrity Engine fields to emission_records (PostgreSQL compatible)
             alter_statements = [
                 "ALTER TABLE emission_records ADD COLUMN IF NOT EXISTS compliance_score NUMERIC(5,2) DEFAULT 0.0",
                 "ALTER TABLE emission_records ADD COLUMN IF NOT EXISTS factor_source_quality NUMERIC(5,2) DEFAULT 0.0",
@@ -132,7 +133,7 @@ def _run_safe_migrations() -> None:
                 try:
                     conn.exec_driver_sql(stmt)
                 except Exception:
-                    # SQLite JSON type or IF NOT EXISTS may differ; try fallbacks
+                    # PostgreSQL JSON type handling
                     if "JSON" in stmt:
                         fallback = stmt.replace(" JSON", " jsonb")
                         try:
@@ -182,7 +183,9 @@ def parse_date_string(date_str: str) -> Optional[date]:
 
 # Create tables
 _run_safe_migrations()
-models.Base.metadata.create_all(bind=engine)
+# Skip table creation for PostgreSQL as we use migration scripts
+if not DATABASE_URL.startswith("postgresql"):
+    models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Carbon DNA Ledger", version="1.0.0")
 
@@ -601,7 +604,7 @@ def get_emission_records(
     db: Session = Depends(get_db)
 ):
     """Get paginated list of emission records"""
-    # Ensure new columns exist (Postgres safe, SQLite ignores)
+    # Ensure new columns exist (PostgreSQL safe)
     try:
         db.execute(text("ALTER TABLE emission_records ADD COLUMN IF NOT EXISTS calculation_method TEXT"))
         db.execute(text("ALTER TABLE emission_records ADD COLUMN IF NOT EXISTS calculation_metadata JSON"))
@@ -2179,32 +2182,7 @@ def get_crosscheck_results(
         # Apply limit
         crosschecks = crosschecks[:limit]
         
-        return [
-            {
-                "id": str(cc.id),
-                "year": cc.year,
-                "month": cc.month,
-                "sector": cc.ct_sector,
-                "subsector": cc.ct_subsector,
-                "country_code": cc.ct_country_code,
-                "region": cc.ct_region,
-                "our_emissions_kgco2e": float(cc.our_emissions_kgco2e),
-                "ct_emissions_kgco2e": float(cc.ct_emissions_kgco2e),
-                "delta_kgco2e": float(cc.delta_kgco2e),
-                "delta_percentage": float(cc.delta_percentage),
-                "compliance_status": cc.compliance_status,
-                "threshold_exceeded": cc.threshold_exceeded,
-                "threshold_percentage": float(cc.threshold_percentage),
-                "record_count": cc.record_count,
-                "confidence_score": float(cc.confidence_score),
-                "remediation_suggestions": cc.remediation_suggestions,
-                "suggested_actions": cc.suggested_actions,
-                "is_acknowledged": cc.is_acknowledged,
-                "acknowledged_by": cc.acknowledged_by,
-                "created_at": cc.created_at.isoformat() if cc.created_at else None
-            }
-            for cc in crosschecks
-        ]
+        return crosschecks
         
     except Exception as e:
         logger.error(f"Error fetching cross-check results: {e}")
@@ -2281,7 +2259,7 @@ def get_climate_trace_sectors():
             "success": True,
             "sectors": sectors,
             "total_sectors": len(sectors),
-            "mapping": climate_trace_service.ACTIVITY_TO_CT_MAPPING
+            "mapping": "Activity mapping available via map_activity_to_climate_trace method"
         }
         
     except Exception as e:
@@ -2710,33 +2688,34 @@ def get_compliance_scores(limit: int = 100, db: Session = Depends(get_db)):
 
 @app.get("/api/compliance/audit-snapshots")
 def get_audit_snapshots(limit: int = 10, db: Session = Depends(get_db)):
-    """Get audit snapshots"""
+    """Get unified audit snapshots from both systems"""
     try:
-        snapshots = db.query(models.AuditSnapshot).order_by(
-            desc(models.AuditSnapshot.created_at)
-        ).limit(limit).all()
+        # Use the sync service to get unified snapshots
+        unified_snapshots = AuditSyncService.get_unified_snapshots(db, limit)
         
+        # Convert to the expected format
         snapshot_data = []
-        for snapshot in snapshots:
+        for snapshot in unified_snapshots:
             snapshot_data.append({
-                "snapshot_id": str(snapshot.id),
-                "submission_id": snapshot.submission_id,
-                "submission_type": snapshot.submission_type,
-                "reporting_period_start": snapshot.reporting_period_start.isoformat() if snapshot.reporting_period_start else None,
-                "reporting_period_end": snapshot.reporting_period_end.isoformat() if snapshot.reporting_period_end else None,
-                "merkle_root_hash": snapshot.merkle_root_hash,
-                "records_count": snapshot.total_records,
-                "total_emissions_kgco2e": float(snapshot.total_emissions_kgco2e) if snapshot.total_emissions_kgco2e else 0,
-                "average_compliance_score": snapshot.average_compliance_score,
-                "audit_ready_records": snapshot.audit_ready_records,
-                "non_compliant_records": snapshot.non_compliant_records,
-                "created_at": snapshot.created_at.isoformat() if snapshot.created_at else None
+                "snapshot_id": snapshot["id"],
+                "submission_id": snapshot["submission_id"],
+                "submission_type": snapshot["submission_type"],
+                "reporting_period_start": snapshot["reporting_period_start"],
+                "reporting_period_end": snapshot["reporting_period_end"],
+                "merkle_root_hash": f"unified_{snapshot['id'][:16]}",
+                "total_records": snapshot["total_records"],
+                "total_emissions_kgco2e": snapshot["total_emissions_kgco2e"],
+                "average_compliance_score": snapshot.get("average_compliance_score", 0.0),
+                "audit_ready_records": snapshot.get("audit_ready_records", 0),
+                "non_compliant_records": snapshot.get("non_compliant_records", 0),
+                "created_at": snapshot["created_at"],
+                "source": snapshot.get("source", "unified")
             })
         
         return snapshot_data
         
     except Exception as e:
-        logger.error(f"Error getting audit snapshots: {e}")
+        logger.error(f"Error getting unified audit snapshots: {e}")
         return {
             "success": False,
             "error": str(e)
@@ -3348,26 +3327,62 @@ def generate_regulatory_submission(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.delete("/api/compliance/audit-snapshots/{snapshot_id}")
-def delete_audit_snapshot(snapshot_id: str, db: Session = Depends(get_db)):
-    """Delete an audit snapshot"""
+@app.get("/api/compliance/audit-snapshots/{snapshot_id}")
+def get_audit_snapshot(snapshot_id: str, db: Session = Depends(get_db)):
+    """Get a specific audit snapshot by ID"""
     try:
-        # Find the snapshot
-        snapshot = db.query(models.AuditSnapshot).filter(
-            models.AuditSnapshot.submission_id == snapshot_id
-        ).first()
+        # Get unified snapshots and find the specific one
+        unified_snapshots = AuditSyncService.get_unified_snapshots(db, limit=1000)
         
-        if not snapshot:
+        # Find the specific snapshot
+        target_snapshot = None
+        for snapshot in unified_snapshots:
+            if snapshot["submission_id"] == snapshot_id:
+                target_snapshot = snapshot
+                break
+        
+        if not target_snapshot:
             raise HTTPException(status_code=404, detail="Audit snapshot not found")
         
-        # Delete the snapshot
-        db.delete(snapshot)
-        db.commit()
-        
-        return {
-            "success": True,
-            "message": f"Audit snapshot {snapshot_id} deleted successfully"
+        # Convert to the expected format
+        snapshot_data = {
+            "snapshot_id": target_snapshot["id"],
+            "submission_id": target_snapshot["submission_id"],
+            "submission_type": target_snapshot["submission_type"],
+            "reporting_period_start": target_snapshot["reporting_period_start"],
+            "reporting_period_end": target_snapshot["reporting_period_end"],
+            "merkle_root_hash": f"unified_{target_snapshot['id'][:16]}",
+            "total_records": target_snapshot["total_records"],
+            "total_emissions_kgco2e": target_snapshot["total_emissions_kgco2e"],
+            "average_compliance_score": target_snapshot.get("average_compliance_score", 0.0),
+            "audit_ready_records": target_snapshot.get("audit_ready_records", 0),
+            "non_compliant_records": target_snapshot.get("non_compliant_records", 0),
+            "created_at": target_snapshot["created_at"],
+            "source": target_snapshot.get("source", "unified")
         }
+        
+        return snapshot_data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting audit snapshot: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/compliance/audit-snapshots/{snapshot_id}")
+def delete_audit_snapshot(snapshot_id: str, db: Session = Depends(get_db)):
+    """Delete an audit snapshot from both systems"""
+    try:
+        # Use sync service to delete from both systems
+        success = AuditSyncService.delete_from_both_systems(db, snapshot_id)
+        
+        if success:
+            return {
+                "success": True,
+                "message": f"Audit snapshot {snapshot_id} deleted from both systems"
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Audit snapshot not found")
         
     except HTTPException:
         raise
@@ -3831,6 +3846,36 @@ def _generate_readiness_recommendations(readiness) -> List[str]:
     
     return recommendations
 
+
+@app.post("/api/audit/sync")
+def sync_audit_snapshots(db: Session = Depends(get_db)):
+    """Synchronize audit snapshots between both systems"""
+    try:
+        result = AuditSyncService.sync_all_snapshots(db)
+        return {
+            "success": True,
+            "message": "Audit snapshots synchronized successfully",
+            "result": result
+        }
+    except Exception as e:
+        logger.error(f"Error synchronizing audit snapshots: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@app.get("/api/audit/unified-snapshots")
+def get_unified_audit_snapshots(limit: int = 100, db: Session = Depends(get_db)):
+    """Get unified audit snapshots from both systems"""
+    try:
+        unified_snapshots = AuditSyncService.get_unified_snapshots(db, limit)
+        return unified_snapshots
+    except Exception as e:
+        logger.error(f"Error getting unified audit snapshots: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 if __name__ == "__main__":
     import uvicorn

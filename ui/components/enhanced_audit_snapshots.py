@@ -55,9 +55,31 @@ def show_audit_dashboard(api_base: str):
     """Show audit snapshots dashboard"""
     st.subheader("📊 Audit Snapshots Dashboard")
     
+    # Add refresh button, sync button, and timestamp
+    col1, col2, col3 = st.columns([2, 1, 1])
+    with col1:
+        from datetime import datetime
+        st.caption(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    with col2:
+        if st.button("🔄 Refresh Data", type="secondary"):
+            st.rerun()
+    with col3:
+        if st.button("🔄 Sync Systems", type="primary", help="Synchronize data between Compliance Intelligence and Enhanced Audit Snapshots"):
+            with st.spinner("Synchronizing systems..."):
+                try:
+                    sync_response = requests.post(f"{api_base}/api/audit/sync", timeout=30)
+                    if sync_response.status_code == 200:
+                        sync_result = sync_response.json()
+                        st.success(f"✅ {sync_result.get('message', 'Sync completed')}")
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Sync failed: {sync_response.status_code}")
+                except Exception as e:
+                    st.error(f"❌ Sync error: {e}")
+    
     try:
-        # Get recent snapshots
-        response = requests.get(f"{api_base}/api/audit/snapshots?limit=10")
+        # Get unified snapshots from both systems
+        response = requests.get(f"{api_base}/api/audit/unified-snapshots?limit=100")
         response.raise_for_status()
         snapshots = response.json()
         
@@ -69,7 +91,10 @@ def show_audit_dashboard(api_base: str):
         col1, col2, col3, col4 = st.columns(4)
         
         total_snapshots = len(snapshots)
-        total_emissions = sum(float(s.get('total_emissions_kgco2e', 0) or 0) for s in snapshots)
+        total_emissions = sum(
+            float(s.get('total_emissions_kgco2e', 0)) if s.get('total_emissions_kgco2e') is not None else 0 
+            for s in snapshots
+        )
         approved_snapshots = len([s for s in snapshots if s.get('approval_status') == 'approved'])
         pending_snapshots = len([s for s in snapshots if s.get('approval_status') in ['draft', 'pending_review']])
         
@@ -308,6 +333,12 @@ def show_view_snapshots(api_base: str):
     """Show view audit snapshots interface"""
     st.subheader("📋 View Audit Snapshots")
     
+    # Add refresh button
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        if st.button("🔄 Refresh List", type="secondary", key="refresh_view"):
+            st.rerun()
+    
     # Filters
     col1, col2, col3 = st.columns(3)
     
@@ -323,9 +354,16 @@ def show_view_snapshots(api_base: str):
             selected_framework = st.selectbox(
                 "Filter by Framework",
                 options=list(framework_options.keys()),
-                index=0
+                index=0,
+                help="Select a framework to filter snapshots, or 'All' to see all frameworks"
             )
             framework_filter = framework_options[selected_framework]
+            
+            # Show current selection
+            if framework_filter:
+                st.caption(f"🔍 Showing snapshots for: **{selected_framework}**")
+            else:
+                st.caption("🔍 Showing snapshots for: **All Frameworks**")
             
         except:
             framework_filter = None
@@ -359,7 +397,7 @@ def show_view_snapshots(api_base: str):
     # Load snapshots
     try:
         params = {
-            "limit": 50,
+            "limit": 100,
             "offset": 0
         }
         if framework_filter:
@@ -369,7 +407,8 @@ def show_view_snapshots(api_base: str):
         if organization_filter:
             params["organization_id"] = organization_filter
         
-        response = requests.get(f"{api_base}/api/audit/snapshots", params=params)
+        # Use unified snapshots endpoint for consistency
+        response = requests.get(f"{api_base}/api/audit/unified-snapshots", params={"limit": params.get("limit", 100)})
         response.raise_for_status()
         snapshots = response.json()
         
@@ -379,6 +418,29 @@ def show_view_snapshots(api_base: str):
         
         # Display snapshots
         st.subheader(f"Found {len(snapshots)} Audit Snapshots")
+        
+        # Show framework summary
+        if snapshots:
+            framework_summary = {}
+            for snap in snapshots:
+                framework = snap.get('submission_type', 'unknown')
+                framework_summary[framework] = framework_summary.get(framework, 0) + 1
+            
+            if len(framework_summary) > 1:
+                st.info(f"📊 **Framework Summary:** {', '.join([f'{k.upper()}: {v}' for k, v in framework_summary.items()])}")
+        
+        # Debug information
+        with st.expander("🔍 Debug Information", expanded=False):
+            st.write(f"**Applied Filters:**")
+            st.write(f"- Framework: {framework_filter or 'All'}")
+            st.write(f"- Status: {status_filter or 'All'}")
+            st.write(f"- Organization: {organization_filter or 'All'}")
+            st.write(f"**API Parameters:** {params}")
+            st.write(f"**Total snapshots returned:** {len(snapshots)}")
+            
+            if snapshots:
+                frameworks_found = set(snap.get('submission_type', 'unknown') for snap in snapshots)
+                st.write(f"**Frameworks in results:** {list(frameworks_found)}")
         
         for snapshot in snapshots:
             with st.expander(f"📄 {snapshot.get('submission_id', 'Unknown')} - {snapshot.get('submission_type', 'Unknown').upper()}"):
@@ -443,9 +505,51 @@ def show_snapshot_details(api_base: str):
         return
     
     try:
-        response = requests.get(f"{api_base}/api/audit/snapshots/{snapshot_id}")
-        response.raise_for_status()
-        details = response.json()
+        # Debug: Show the exact URL being called
+        url = f"{api_base}/api/audit/snapshots/{snapshot_id}"
+        st.write(f"🔍 **Debug Info (Enhanced Audit Snapshots):**")
+        st.write(f"API Base: {api_base}")
+        st.write(f"Snapshot ID: {snapshot_id}")
+        st.write(f"Full URL: {url}")
+        
+        response = requests.get(url)
+        st.write(f"Response Status: {response.status_code}")
+        st.write(f"Response Headers: {dict(response.headers)}")
+        
+        if response.status_code == 200:
+            st.success("✅ Successfully retrieved snapshot details!")
+            response.raise_for_status()
+            details = response.json()
+        elif response.status_code == 500:
+            st.error(f"❌ Server Error 500: {response.text[:200]}...")
+            st.warning("The Enhanced Audit Snapshots endpoint is experiencing issues. Trying fallback to Compliance Intelligence endpoint...")
+            
+            # Try fallback to Compliance Intelligence endpoint
+            try:
+                fallback_url = f"{api_base}/api/compliance/audit-snapshots/{snapshot_id}"
+                st.write(f"🔄 **Fallback:** Trying {fallback_url}")
+                
+                fallback_response = requests.get(fallback_url, timeout=10)
+                st.write(f"Fallback Status: {fallback_response.status_code}")
+                
+                if fallback_response.status_code == 200:
+                    st.success("✅ Fallback successful! Using Compliance Intelligence data.")
+                    details = fallback_response.json()
+                    # Convert to expected format
+                    details = {
+                        "snapshot": details,
+                        "entries": [],
+                        "audit_logs": []
+                    }
+                else:
+                    st.error(f"❌ Fallback also failed: {fallback_response.status_code}")
+                    return
+            except Exception as e:
+                st.error(f"❌ Fallback exception: {e}")
+                return
+        else:
+            st.error(f"❌ API Error {response.status_code}: {response.text[:200]}...")
+            return
         
         if not details:
             st.error("Audit snapshot not found.")

@@ -81,7 +81,7 @@ ui/
 
 ### Prerequisites
 - Python 3.8+
-- PostgreSQL (or SQLite for development)
+- PostgreSQL (Supabase)
 - OpenAI API key (optional, for AI features)
 
 ### Installation
@@ -172,7 +172,7 @@ SECRET_KEY=your_secret_key
 ```
 
 ### Database Setup
-The application supports both PostgreSQL (production) and SQLite (development). Configure your database connection in the `.env` file.
+The application requires Supabase PostgreSQL. Configure your database connection in the `.env` file.
 
 ## 📊 API Documentation
 

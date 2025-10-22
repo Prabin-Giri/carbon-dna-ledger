@@ -2,7 +2,7 @@
 SQLAlchemy models for Carbon DNA Ledger
 """
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Numeric, DateTime, Text, SmallInteger, ForeignKey, Date, BigInteger, JSON, Boolean
+from sqlalchemy import Column, String, Integer, Numeric, DateTime, Text, SmallInteger, ForeignKey, Date, BigInteger, JSON, Boolean, ARRAY
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -55,7 +55,7 @@ class CarbonEvent(Base):
     result_kgco2e = Column(Numeric, nullable=False)
     uncertainty_pct = Column(Numeric, default=0)
     source_doc = Column(JSON, nullable=False)
-    quality_flags = Column(JSON, default=[])
+    quality_flags = Column(ARRAY(String), default=[])
     fingerprint = Column(JSON, nullable=False)
     row_hash = Column(Text, nullable=False)
     prev_hash = Column(Text)

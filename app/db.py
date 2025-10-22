@@ -8,10 +8,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# Get database URL from environment
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./carbon_dna.db")
+# Get database URL from environment - FORCE SUPABASE POSTGRESQL
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:Nischita%409@db.mfegdhndowdtphrqazrl.supabase.co:5432/postgres")
 if not DATABASE_URL or DATABASE_URL.strip() == "":
-    DATABASE_URL = "sqlite:///./carbon_dna.db"
+    DATABASE_URL = "postgresql://postgres:Nischita%409@db.mfegdhndowdtphrqazrl.supabase.co:5432/postgres"
+
+# ENSURE WE NEVER USE SQLITE - ALWAYS USE SUPABASE POSTGRESQL
+if DATABASE_URL.startswith("sqlite"):
+    print("[BOOT] WARNING: SQLite detected, forcing Supabase PostgreSQL!")
+    DATABASE_URL = "postgresql://postgres:Nischita%409@db.mfegdhndowdtphrqazrl.supabase.co:5432/postgres"
 
 # Normalize Postgres URL and prefer psycopg v3 driver when available
 if DATABASE_URL.startswith("postgres://"):
@@ -31,14 +36,10 @@ except Exception:
     pass
 
 def _create_engine(url: str):
+    """Create PostgreSQL engine for Supabase - SQLite not supported"""
     if url.startswith("sqlite"):
-        return create_engine(
-            url,
-            pool_pre_ping=True,
-            pool_recycle=300,
-            echo=False,
-            connect_args={"check_same_thread": False}
-        )
+        raise Exception("SQLite is not supported. This application requires Supabase PostgreSQL.")
+    
     return create_engine(
         url,
         pool_pre_ping=True,
@@ -46,46 +47,20 @@ def _create_engine(url: str):
         echo=False
     )
 
-# Create SQLAlchemy engine with fallback to SQLite if Postgres auth fails or URL is placeholder
-if DATABASE_URL.startswith("sqlite"):
-    # Ensure absolute path for SQLite to avoid CWD issues
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    db_path = os.path.join(project_root, "carbon_dna.db")
-    # Make sure directory exists and file is creatable
-    try:
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
-        if not os.path.exists(db_path):
-            with open(db_path, 'a'):
-                pass
-    except Exception as _e:
-        print(f"[BOOT] SQLite path prep failed: {_e}")
-    DATABASE_URL = f"sqlite:///{db_path}"
-    print(f"[BOOT] SQLite path set to {DATABASE_URL}")
-
+# Create SQLAlchemy engine - SUPABASE POSTGRESQL ONLY
+print(f"[BOOT] Creating engine for Supabase PostgreSQL: {DATABASE_URL[:50]}...")
 engine = _create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Probe connection early to surface misconfig and optionally fallback
+# Test connection to Supabase PostgreSQL
 try:
     with engine.connect() as _conn:
         _conn.exec_driver_sql("SELECT 1")
+    print("[BOOT] ✅ Successfully connected to Supabase PostgreSQL")
 except Exception as _e:
-    # For local development, if DB connection fails, fall back to SQLite so the app can start
-    print(f"[BOOT] Database connection check failed: {_e}")
-    print("[BOOT] Falling back to local SQLite database for development.")
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    db_path = os.path.join(project_root, "carbon_dna.db")
-    try:
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
-        if not os.path.exists(db_path):
-            with open(db_path, 'a'):
-                pass
-    except Exception as _e2:
-        print(f"[BOOT] SQLite path prep failed during fallback: {_e2}")
-    DATABASE_URL = f"sqlite:///{db_path}"
-    print(f"[BOOT] SQLite path set to {DATABASE_URL}")
-    engine = _create_engine(DATABASE_URL)
-    SessionLocal.configure(bind=engine)
+    print(f"[BOOT] ❌ Failed to connect to Supabase PostgreSQL: {_e}")
+    print("[BOOT] This application requires Supabase PostgreSQL - no SQLite fallback!")
+    raise Exception("Cannot connect to Supabase PostgreSQL database. Please check your DATABASE_URL.")
 
 # Base class for models
 Base = declarative_base()

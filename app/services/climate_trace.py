@@ -23,51 +23,99 @@ class ClimateTraceService:
     def __init__(self):
         self.enabled = os.getenv('COMPLIANCE_CT_ENABLED', 'false').lower() == 'true'
         
-        # Climate TRACE methodology-based emission factors (kg CO2e per unit)
+        # Enhanced Climate TRACE methodology-based emission factors (kg CO2e per unit)
         self.emission_factors = {
             'electricity-generation': {
                 'coal': 0.9,      # kg CO2e per kWh
                 'natural-gas': 0.4,
                 'oil': 0.7,
                 'renewable': 0.05,
+                'solar': 0.04,
+                'wind': 0.03,
+                'hydro': 0.02,
+                'nuclear': 0.01,
                 'default': 0.5
             },
             'road-transportation': {
                 'gasoline': 0.2,  # kg CO2e per km
                 'diesel': 0.15,
                 'electric': 0.05,
+                'hybrid': 0.12,
+                'lpg': 0.18,
+                'cng': 0.16,
                 'default': 0.18
             },
             'iron-and-steel': {
-                'default': 1.8    # kg CO2e per kg steel
+                'blast-furnace': 2.1,  # kg CO2e per kg steel
+                'electric-arc': 0.8,
+                'basic-oxygen': 1.9,
+                'default': 1.8
             },
             'oil-and-gas-production': {
-                'default': 0.1    # kg CO2e per MJ
+                'oil': 0.12,      # kg CO2e per MJ
+                'natural-gas': 0.08,
+                'lng': 0.15,
+                'refining': 0.1,
+                'default': 0.1
             },
             'buildings': {
                 'heating': 0.05,  # kg CO2e per m²
                 'cooling': 0.03,
                 'lighting': 0.02,
+                'residential': 0.04,
+                'commercial': 0.06,
+                'industrial': 0.08,
                 'default': 0.04
             },
             'aviation': {
-                'default': 0.3    # kg CO2e per passenger-km
+                'domestic': 0.25,  # kg CO2e per passenger-km
+                'international': 0.35,
+                'cargo': 0.4,
+                'default': 0.3
             },
             'shipping': {
-                'default': 0.01   # kg CO2e per tonne-km
+                'container': 0.008,  # kg CO2e per tonne-km
+                'bulk': 0.012,
+                'tanker': 0.015,
+                'default': 0.01
             },
             'manufacturing': {
-                'default': 0.3    # kg CO2e per unit
+                'cement': 0.9,    # kg CO2e per kg cement
+                'aluminum': 8.2,  # kg CO2e per kg aluminum
+                'paper': 0.3,     # kg CO2e per kg paper
+                'textiles': 0.4,  # kg CO2e per kg textiles
+                'chemicals': 0.5, # kg CO2e per kg chemicals
+                'default': 0.3
             },
             'agriculture': {
-                'default': 0.1    # kg CO2e per kg
+                'livestock': 0.15,  # kg CO2e per kg
+                'crops': 0.08,
+                'rice': 0.2,
+                'fertilizer': 0.3,
+                'default': 0.1
             },
             'waste': {
-                'default': 0.2    # kg CO2e per kg
+                'landfill': 0.25,   # kg CO2e per kg
+                'incineration': 0.15,
+                'recycling': 0.05,
+                'composting': 0.02,
+                'default': 0.2
+            },
+            'mining': {
+                'coal': 0.05,      # kg CO2e per kg
+                'metals': 0.08,
+                'quarry': 0.03,
+                'default': 0.06
+            },
+            'construction': {
+                'concrete': 0.3,   # kg CO2e per kg
+                'steel': 1.8,
+                'glass': 0.2,
+                'default': 0.4
             }
         }
         
-        # Typical activity levels for benchmarking (per month)
+        # Enhanced typical activity levels for benchmarking (per month)
         self.benchmark_activity_levels = {
             'electricity-generation': 100000,  # kWh
             'road-transportation': 50000,      # km
@@ -78,7 +126,9 @@ class ClimateTraceService:
             'shipping': 50000,                 # tonne-km
             'manufacturing': 20000,            # units
             'agriculture': 50000,              # kg
-            'waste': 30000                     # kg
+            'waste': 30000,                    # kg
+            'mining': 15000,                   # kg
+            'construction': 8000               # kg
         }
         
         logger.info(f"Climate TRACE service initialized - Enabled: {self.enabled}")
@@ -97,55 +147,65 @@ class ClimateTraceService:
         Returns:
             Dictionary with Climate TRACE mapping
         """
-        if not self.enabled:
-            return {
-                'ct_sector': None,
-                'ct_subsector': None,
-                'ct_asset_type': None,
-                'ct_region': 'Global',
-                'ct_country_code': None
-            }
+        # Always perform mapping regardless of enabled status for consistency
+        # The enabled status only affects actual API calls and data fetching
         
         activity_lower = activity_type.lower() if activity_type else ''
         fuel_lower = fuel_type.lower() if fuel_type else ''
         category_lower = category.lower() if category else ''
         
         # Enhanced mapping logic - check both activity_type and category
-        if (any(keyword in activity_lower for keyword in ['electricity', 'power', 'generation']) or
-            any(keyword in category_lower for keyword in ['electricity', 'power', 'generation'])):
+        if (any(keyword in activity_lower for keyword in ['electricity', 'power', 'generation', 'grid', 'utility']) or
+            any(keyword in category_lower for keyword in ['electricity', 'power', 'generation', 'grid', 'utility'])):
+            fuel_type = 'renewable' if any(f in fuel_lower for f in ['solar', 'wind', 'hydro', 'renewable', 'clean']) else 'fossil'
             return {
                 'ct_sector': 'electricity-generation',
-                'ct_subsector': 'Fossil Fuels' if any(f in fuel_lower for f in ['coal', 'gas', 'oil']) else 'Renewables',
+                'ct_subsector': 'Renewables' if fuel_type == 'renewable' else 'Fossil Fuels',
                 'ct_asset_type': 'Power Plant',
                 'ct_region': 'Global',
                 'ct_country_code': None
             }
-        elif any(keyword in activity_lower for keyword in ['transport', 'vehicle', 'road', 'truck', 'car']):
+        elif any(keyword in activity_lower for keyword in ['transport', 'vehicle', 'road', 'truck', 'car', 'fleet', 'logistics']):
+            # Check both activity_type and category for passenger indicators
+            passenger_indicators = ['passenger', 'car', 'taxi', 'bus', 'personal']
+            vehicle_type = 'passenger' if (any(v in activity_lower for v in passenger_indicators) or 
+                                         any(v in category_lower for v in passenger_indicators)) else 'freight'
             return {
                 'ct_sector': 'road-transportation',
-                'ct_subsector': 'Passenger Vehicles' if 'passenger' in activity_lower else 'Freight',
+                'ct_subsector': 'Passenger Vehicles' if vehicle_type == 'passenger' else 'Freight Vehicles',
                 'ct_asset_type': 'Vehicle',
                 'ct_region': 'Global',
                 'ct_country_code': None
             }
-        elif any(keyword in activity_lower for keyword in ['industrial', 'process', 'manufacturing', 'steel', 'iron']):
-            return {
-                'ct_sector': 'iron-and-steel',
-                'ct_subsector': 'Steel Production',
-                'ct_asset_type': 'Industrial Facility',
-                'ct_region': 'Global',
-                'ct_country_code': None
-            }
-        elif any(keyword in activity_lower for keyword in ['building', 'office', 'residential', 'commercial']):
+        elif any(keyword in activity_lower for keyword in ['industrial', 'process', 'manufacturing', 'steel', 'iron', 'metal', 'production']):
+            if any(m in activity_lower for m in ['steel', 'iron', 'metal']):
+                return {
+                    'ct_sector': 'iron-and-steel',
+                    'ct_subsector': 'Steel Production',
+                    'ct_asset_type': 'Steel Plant',
+                    'ct_region': 'Global',
+                    'ct_country_code': None
+                }
+            else:
+                return {
+                    'ct_sector': 'manufacturing',
+                    'ct_subsector': 'General Manufacturing',
+                    'ct_asset_type': 'Industrial Facility',
+                    'ct_region': 'Global',
+                    'ct_country_code': None
+                }
+        elif any(keyword in activity_lower for keyword in ['building', 'office', 'residential', 'commercial', 'facility', 'premises']):
+            building_type = 'commercial' if any(b in activity_lower for b in ['commercial', 'office', 'retail', 'warehouse']) else 'residential'
             return {
                 'ct_sector': 'buildings',
-                'ct_subsector': 'Commercial' if 'commercial' in activity_lower else 'Residential',
+                'ct_subsector': 'Commercial Buildings' if building_type == 'commercial' else 'Residential Buildings',
                 'ct_asset_type': 'Building',
                 'ct_region': 'Global',
                 'ct_country_code': None
             }
-        elif (any(keyword in activity_lower for keyword in ['waste', 'landfill', 'disposal']) or
-              any(keyword in category_lower for keyword in ['waste', 'landfill', 'disposal'])):
+        elif (any(keyword in activity_lower for keyword in ['waste', 'landfill', 'disposal', 'recycling', 'composting']) or
+              any(keyword in category_lower for keyword in ['waste', 'landfill', 'disposal', 'recycling', 'composting'])):
+            waste_type = 'recycling' if 'recycling' in activity_lower else 'landfill'
             return {
                 'ct_sector': 'waste',
                 'ct_subsector': 'Waste Management',
@@ -153,27 +213,58 @@ class ClimateTraceService:
                 'ct_region': 'Global',
                 'ct_country_code': None
             }
-        elif any(keyword in activity_lower for keyword in ['aviation', 'aircraft', 'flight']):
+        elif any(keyword in activity_lower for keyword in ['aviation', 'aircraft', 'flight', 'airline', 'airport']):
+            # Check both activity_type and category for cargo indicators
+            cargo_indicators = ['cargo', 'freight', 'shipping', 'logistics']
+            flight_type = 'cargo' if (any(c in activity_lower for c in cargo_indicators) or 
+                                    any(c in category_lower for c in cargo_indicators)) else 'passenger'
             return {
                 'ct_sector': 'aviation',
-                'ct_subsector': 'Passenger Aviation',
+                'ct_subsector': 'Cargo Aviation' if flight_type == 'cargo' else 'Passenger Aviation',
                 'ct_asset_type': 'Aircraft',
                 'ct_region': 'Global',
                 'ct_country_code': None
             }
-        elif any(keyword in activity_lower for keyword in ['shipping', 'vessel', 'maritime']):
+        elif any(keyword in activity_lower for keyword in ['shipping', 'vessel', 'maritime', 'port', 'cargo', 'freight']):
+            vessel_type = 'container' if 'container' in activity_lower else 'bulk'
             return {
                 'ct_sector': 'shipping',
-                'ct_subsector': 'Cargo Shipping',
+                'ct_subsector': 'Container Shipping' if vessel_type == 'container' else 'Bulk Shipping',
                 'ct_asset_type': 'Vessel',
                 'ct_region': 'Global',
                 'ct_country_code': None
             }
-        elif any(keyword in activity_lower for keyword in ['oil', 'gas', 'petroleum']):
+        elif any(keyword in activity_lower for keyword in ['oil', 'gas', 'petroleum', 'fuel', 'refinery', 'drilling']):
+            fuel_type = 'oil' if 'oil' in activity_lower else 'gas'
             return {
                 'ct_sector': 'oil-and-gas-production',
-                'ct_subsector': 'Oil Production' if 'oil' in activity_lower else 'Gas Production',
+                'ct_subsector': 'Oil Production' if fuel_type == 'oil' else 'Gas Production',
                 'ct_asset_type': 'Oil/Gas Facility',
+                'ct_region': 'Global',
+                'ct_country_code': None
+            }
+        elif any(keyword in activity_lower for keyword in ['agriculture', 'farming', 'livestock', 'crops', 'food', 'farming']):
+            ag_type = 'livestock' if any(l in activity_lower for l in ['livestock', 'cattle', 'poultry', 'dairy']) else 'crops'
+            return {
+                'ct_sector': 'agriculture',
+                'ct_subsector': 'Livestock' if ag_type == 'livestock' else 'Crop Production',
+                'ct_asset_type': 'Farm',
+                'ct_region': 'Global',
+                'ct_country_code': None
+            }
+        elif any(keyword in activity_lower for keyword in ['mining', 'quarry', 'extraction', 'mineral']):
+            return {
+                'ct_sector': 'mining',
+                'ct_subsector': 'Mineral Extraction',
+                'ct_asset_type': 'Mine',
+                'ct_region': 'Global',
+                'ct_country_code': None
+            }
+        elif any(keyword in activity_lower for keyword in ['construction', 'building', 'infrastructure', 'concrete', 'cement']):
+            return {
+                'ct_sector': 'construction',
+                'ct_subsector': 'Infrastructure',
+                'ct_asset_type': 'Construction Site',
                 'ct_region': 'Global',
                 'ct_country_code': None
             }
@@ -199,7 +290,7 @@ class ClimateTraceService:
         Returns:
             Estimated emissions in kg CO2e
         """
-        if not self.enabled or sector not in self.emission_factors:
+        if sector not in self.emission_factors:
             return 0.0
         
         # Get emission factor for the sector and fuel type
@@ -485,9 +576,9 @@ class ClimateTraceService:
                     'id': str(crosscheck.id),
                     'year': crosscheck.year,
                     'month': crosscheck.month,
-                    'sector': crosscheck.sector,
-                    'our_emissions': float(crosscheck.our_emissions),
-                    'climate_trace_estimate': float(crosscheck.climate_trace_estimate),
+                    'sector': crosscheck.ct_sector,
+                    'our_emissions_kgco2e': float(crosscheck.our_emissions_kgco2e),
+                    'ct_emissions_kgco2e': float(crosscheck.ct_emissions_kgco2e),
                     'delta_percentage': float(crosscheck.delta_percentage),
                     'compliance_status': crosscheck.compliance_status,
                     'threshold_exceeded': crosscheck.threshold_exceeded,

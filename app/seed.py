@@ -125,7 +125,7 @@ def seed_demo_events(db):
                     'field': 'csv_row',
                     'raw_text': str(record)
                 }],
-                'quality_flags': result.get('quality_flags', []),
+                'quality_flags': result.get('quality_flags', []) if isinstance(result.get('quality_flags', []), list) else [],
                 'fingerprint': ingest.create_fingerprint(record, factor, result),
                 'prev_hash': prev_hash
             }

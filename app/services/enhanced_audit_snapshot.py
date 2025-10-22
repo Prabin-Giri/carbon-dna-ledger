@@ -85,7 +85,7 @@ class EnhancedAuditSnapshotService:
                 request.reporting_period_end
             )
             
-            # Get emission records for the period
+            # Get emission records for the period - INCLUDE ALL RECORDS FOR AUDIT PURPOSES
             records = self._get_emission_records(
                 request.reporting_period_start,
                 request.reporting_period_end,
@@ -94,6 +94,10 @@ class EnhancedAuditSnapshotService:
                 request.include_scope_2,
                 request.include_scope_3
             )
+            
+            # AUDIT REQUIREMENT: Include ALL records regardless of quality
+            # This ensures complete audit trail and proper confidence scoring
+            # Quality issues will be documented in compliance flags and scores
             
             if not records:
                 return EnhancedAuditSnapshotResponse(
@@ -403,21 +407,26 @@ class EnhancedAuditSnapshotService:
         include_scope_2: bool = True,
         include_scope_3: bool = True
     ) -> List[EmissionRecord]:
-        """Get emission records for the specified period and scope"""
+        """Get emission records for the specified period and scope - INCLUDE ALL RECORDS FOR AUDIT PURPOSES"""
         
+        # Include records with NULL dates for complete audit trail
+        from sqlalchemy import or_
         query = self.db.query(EmissionRecord).filter(
-            and_(
-                EmissionRecord.date >= start_date,
-                EmissionRecord.date <= end_date
+            or_(
+                and_(
+                    EmissionRecord.date >= start_date,
+                    EmissionRecord.date <= end_date
+                ),
+                EmissionRecord.date.is_(None)  # Include NULL-dated records for audit completeness
             )
         )
         
         if record_ids:
             query = query.filter(EmissionRecord.id.in_(record_ids))
         
-        # Apply scope filters if needed
-        # Note: This is simplified - in practice, you'd have scope fields in EmissionRecord
-        # or use the enhanced models with proper scope categorization
+        # AUDIT REQUIREMENT: Include ALL records regardless of quality or scope
+        # This ensures complete audit trail and proper confidence scoring
+        # Quality issues will be documented in compliance flags and scores
         
         return query.all()
     
