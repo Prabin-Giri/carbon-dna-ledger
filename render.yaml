@@ -1,0 +1,41 @@
+# Render Blueprint for Carbon DNA Ledger
+services:
+  # FastAPI Backend
+  - type: web
+    name: carbon-dna-api
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DATABASE_URL
+        sync: false
+      - key: COMPLIANCE_CT_ENABLED
+        value: true
+      - key: PORT
+        value: 8000
+    healthCheckPath: /health
+
+  # Streamlit Frontend
+  - type: web
+    name: carbon-dna-ui
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run ui/app.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: API_BASE
+        value: https://carbon-dna-api.onrender.com
+      - key: DATABASE_URL
+        sync: false
+      - key: COMPLIANCE_CT_ENABLED
+        value: true
+      - key: PORT
+        value: 8501
+
