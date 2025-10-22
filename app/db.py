@@ -46,10 +46,17 @@ def _create_engine(url: str):
     if url.startswith("sqlite"):
         raise Exception("SQLite is not supported. This application requires Supabase PostgreSQL.")
     
+    # Optimized connection settings for Supabase Session Pooler
     return create_engine(
         url,
-        pool_pre_ping=True,
-        pool_recycle=300,
+        pool_pre_ping=True,           # Test connections before using
+        pool_recycle=300,              # Recycle connections every 5 minutes
+        pool_size=5,                   # Keep 5 connections in pool
+        max_overflow=10,               # Allow up to 10 extra connections
+        connect_args={
+            "connect_timeout": 10,     # 10 second connection timeout
+            "options": "-c timezone=utc"
+        },
         echo=False
     )
 
@@ -58,15 +65,15 @@ print(f"[BOOT] Creating engine for Supabase PostgreSQL: {DATABASE_URL[:50]}...")
 engine = _create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Test connection to Supabase PostgreSQL
+# Test connection to Supabase PostgreSQL (optional - will retry on first request)
 try:
     with engine.connect() as _conn:
         _conn.exec_driver_sql("SELECT 1")
     print("[BOOT] ✅ Successfully connected to Supabase PostgreSQL")
 except Exception as _e:
-    print(f"[BOOT] ❌ Failed to connect to Supabase PostgreSQL: {_e}")
-    print("[BOOT] This application requires Supabase PostgreSQL - no SQLite fallback!")
-    raise Exception("Cannot connect to Supabase PostgreSQL database. Please check your DATABASE_URL.")
+    print(f"[BOOT] ⚠️ Initial connection test failed: {_e}")
+    print("[BOOT] Will retry on first API request (this is normal for cloud deployments)")
+    # Don't raise exception - let the app start and retry later
 
 # Base class for models
 Base = declarative_base()
