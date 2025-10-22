@@ -2,8 +2,13 @@
 Carbon DNA Ledger - Streamlit UI
 Main application with all UI components
 """
-from dotenv import load_dotenv
-load_dotenv()
+# Load environment variables (optional for local dev, not needed on Streamlit Cloud)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # Running on Streamlit Cloud or dotenv not available
+    pass
 
 # Suppress Plotly deprecation warnings
 import warnings
